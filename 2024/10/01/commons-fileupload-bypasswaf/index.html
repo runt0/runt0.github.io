@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang=zh>
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="在去年某次红队评估项目中遇到一个Java的fckeditor上传接口，测试过程中存在WAF基于数据包的拦截。在通过审计上传组件commons-fileupload的源码绕过WAF后，才想起来fckeditor java版本是有白名单的，虽然没能从这个点GetShell，但这个过程还是比较有意思。于是记录下commons-fileupload组件中可能可以用来绕过WAF的点。在22年看过Java文件">
+<meta property="og:type" content="article">
+<meta property="og:title" content="commons-fileupload组件解析特性">
+<meta property="og:url" content="http://example.com/2024/10/01/commons-fileupload-bypasswaf/index.html">
+<meta property="og:site_name" content="runt0">
+<meta property="og:description" content="在去年某次红队评估项目中遇到一个Java的fckeditor上传接口，测试过程中存在WAF基于数据包的拦截。在通过审计上传组件commons-fileupload的源码绕过WAF后，才想起来fckeditor java版本是有白名单的，虽然没能从这个点GetShell，但这个过程还是比较有意思。于是记录下commons-fileupload组件中可能可以用来绕过WAF的点。在22年看过Java文件">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/2024/10/01/commons-fileupload-bypasswaf/image-20241001151415600.png">
+<meta property="og:image" content="http://example.com/2024/10/01/commons-fileupload-bypasswaf/image-20241001152038079.png">
+<meta property="og:image" content="http://example.com/2024/10/01/commons-fileupload-bypasswaf/image-20241001152223517.png">
+<meta property="og:image" content="http://example.com/2024/10/01/commons-fileupload-bypasswaf/image-20241008110332390.png">
+<meta property="og:image" content="http://example.com/2024/10/01/commons-fileupload-bypasswaf/image-20241008111734809.png">
+<meta property="og:image" content="http://example.com/2024/10/01/commons-fileupload-bypasswaf/image-20241001162124816.png">
+<meta property="og:image" content="http://example.com/2024/10/01/commons-fileupload-bypasswaf/image-20241001162228208.png">
+<meta property="og:image" content="http://example.com/2024/10/01/commons-fileupload-bypasswaf/image-20241008114250213.png">
+<meta property="og:image" content="http://example.com/2024/10/01/commons-fileupload-bypasswaf/image-20241008134715333.png">
+<meta property="og:image" content="http://example.com/2024/10/01/commons-fileupload-bypasswaf/image-20241008134748784.png">
+<meta property="og:image" content="http://example.com/2024/10/01/commons-fileupload-bypasswaf/image-20241008134830689.png">
+<meta property="article:published_time" content="2024-10-01T06:15:56.000Z">
+<meta property="article:modified_time" content="2024-10-08T06:48:06.323Z">
+<meta property="article:author" content="runt0">
+<meta property="article:tag" content="代码审计">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2024/10/01/commons-fileupload-bypasswaf/image-20241001151415600.png">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/favicon.ico">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/favicon-192x192.png" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+        
+      
+    
+    <!-- title -->
+    <title>commons-fileupload组件解析特性</title>
+    <!-- async scripts -->
+    <!-- Google Analytics -->
+
+
+    <!-- Umami Analytics -->
+
+
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="顶部" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li><!--
+     -->
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        
+        <li><a class="icon" aria-label="下一篇" href="/2024/09/29/spring-web-hessian-deserialization/"><i class="fa-solid fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
+        
+        <li><a class="icon" aria-label="返回顶部" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="分享文章" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">上一篇</span>
+      <span id="i-next" class="info" style="display:none;">下一篇</span>
+      <span id="i-top" class="info" style="display:none;">返回顶部</span>
+      <span id="i-share" class="info" style="display:none;">分享文章</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2024/10/01/commons-fileupload-bypasswaf/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&text=commons-fileupload组件解析特性"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&title=commons-fileupload组件解析特性"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&is_video=false&description=commons-fileupload组件解析特性"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=commons-fileupload组件解析特性&body=Check out this article: http://example.com/2024/10/01/commons-fileupload-bypasswaf/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&title=commons-fileupload组件解析特性"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&title=commons-fileupload组件解析特性"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&title=commons-fileupload组件解析特性"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&title=commons-fileupload组件解析特性"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&name=commons-fileupload组件解析特性&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&t=commons-fileupload组件解析特性"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    
+    
+      <div id="toc">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%B4%E4%BD%93%E8%BF%87%E7%A8%8B"><span class="toc-number">1.</span> <span class="toc-text">整体过程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%B7%E4%BD%93%E5%88%86%E6%9E%90"><span class="toc-number">2.</span> <span class="toc-text">具体分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#multipart%E8%A7%A3%E6%9E%90"><span class="toc-number">2.1.</span> <span class="toc-text">multipart解析</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#multipart-%E5%89%8D%E7%BC%80%E7%BB%95%E8%BF%87"><span class="toc-number">2.1.1.</span> <span class="toc-text">multipart&#x2F;前缀绕过</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%A4%A7%E5%B0%8F%E5%86%99%E6%B7%B7%E5%90%88%E7%BB%95%E8%BF%87"><span class="toc-number">2.1.2.</span> <span class="toc-text">大小写混合绕过</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#boundary%E8%A7%A3%E6%9E%90"><span class="toc-number">2.1.3.</span> <span class="toc-text">boundary解析</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#%E5%88%86%E5%89%B2%E7%AC%A6"><span class="toc-number">2.1.3.1.</span> <span class="toc-text">分割符</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#%E7%A9%BA%E7%99%BD%E5%AD%97%E7%AC%A6"><span class="toc-number">2.1.3.2.</span> <span class="toc-text">空白字符</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B1%9E%E6%80%A7%E8%A7%A3%E6%9E%90"><span class="toc-number">2.2.</span> <span class="toc-text">属性解析</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#form-data%E5%89%8D%E7%BC%80%E7%BB%95%E8%BF%87"><span class="toc-number">2.2.1.</span> <span class="toc-text">form-data前缀绕过</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#MIMI%E7%BC%96%E7%A0%81%E7%BB%95%E8%BF%87"><span class="toc-number">2.2.2.</span> <span class="toc-text">MIMI编码绕过</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%9C%81%E7%95%A5filename%E5%8F%82%E6%95%B0"><span class="toc-number">2.2.3.</span> <span class="toc-text">省略filename参数</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">3.</span> <span class="toc-text">总结</span></a></li></ol>
+      </div>
+    
+  </span>
+</div>
+
+    
+    <div class="content index py4 ">
+        
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle p-name" itemprop="name headline">
+        commons-fileupload组件解析特性
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span class="p-name" itemprop="name">runt0</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2024-10-01T06:15:56.000Z" class="dt-published" itemprop="datePublished">01 10 2024</time>
+        
+      
+    </div>
+
+
+      
+
+      
+    <div class="article-tag">
+        <i class="fa-solid fa-tag"></i>
+        <a class="p-category" href="/tags/%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/" rel="tag">代码审计</a>
+    </div>
+
+
+    </div>
+  </header>
+  
+
+  <div class="content e-content" itemprop="articleBody">
+    <p>在去年某次红队评估项目中遇到一个Java的fckeditor上传接口，测试过程中存在WAF基于数据包的拦截。在通过审计上传组件commons-fileupload的源码绕过WAF后，才想起来fckeditor java版本是有白名单的，虽然没能从这个点GetShell，但这个过程还是比较有意思。于是记录下commons-fileupload组件中可能可以用来绕过WAF的点。在22年看过<a target="_blank" rel="noopener" href="https://y4tacker.github.io/2022/02/25/year/2022/2/Java%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0%E5%A4%A7%E6%9D%80%E5%99%A8-%E7%BB%95waf(%E9%92%88%E5%AF%B9commons-fileupload%E7%BB%84%E4%BB%B6)/">Java文件上传大杀器-绕waf(针对commons-fileupload组件)</a>这篇文章，不过就记得一个MIME编码了，而且当时也没能成功绕过，最近又看了下，当时绕过的方法反而是文章中一个比较简单的废弃的方法，想着再详细梳理下commons-fileupload的解析过程，于是有了这篇文章。</p>
+<h2 id="整体过程"><a href="#整体过程" class="headerlink" title="整体过程"></a>整体过程</h2><p>首先看</p>
+<p><code>org.apache.commons.fileupload.FileUploadBase#parseRequest(org.apache.commons.fileupload.RequestContext)</code>函数，先解析当前文件列表</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">FileItemIterator</span> <span class="variable">iter</span> <span class="operator">=</span> <span class="built_in">this</span>.getItemIterator(ctx);</span><br></pre></td></tr></table></figure>
+
+<p>然后遍历文件列表，根据解析好的文件信息以及文件流等进行复制</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span>(iter.hasNext()) &#123;</span><br><span class="line">                <span class="keyword">if</span> ((<span class="type">long</span>)items.size() == <span class="built_in">this</span>.fileCountMax) &#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">FileCountLimitExceededException</span>(<span class="string">&quot;attachment&quot;</span>, <span class="built_in">this</span>.getFileCountMax());</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="type">FileItemStream</span> <span class="variable">item</span> <span class="operator">=</span> iter.next();</span><br><span class="line">                <span class="type">String</span> <span class="variable">fileName</span> <span class="operator">=</span> ((FileItemIteratorImpl.FileItemStreamImpl)item).name;</span><br><span class="line">                fileItem = fac.createItem(item.getFieldName(), item.getContentType(), item.isFormField(), fileName);</span><br><span class="line">                items.add(fileItem);</span><br><span class="line"></span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    Streams.copy(item.openStream(), fileItem.getOutputStream(), <span class="literal">true</span>, buffer);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (FileUploadIOException var25) &#123;</span><br><span class="line">                    <span class="keyword">throw</span> (FileUploadException)var25.getCause();</span><br><span class="line">                &#125; <span class="keyword">catch</span> (IOException var26) &#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IOFileUploadException</span>(String.format(<span class="string">&quot;Processing of %s request failed. %s&quot;</span>, <span class="string">&quot;multipart/form-data&quot;</span>, var26.getMessage()), var26);</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="type">FileItemHeaders</span> <span class="variable">fih</span> <span class="operator">=</span> item.getHeaders();</span><br><span class="line">                fileItem.setHeaders(fih);</span><br><span class="line">            &#125;</span><br></pre></td></tr></table></figure>
+
+<p>所以解析的逻辑主要在<code>org.apache.commons.fileupload.FileUploadBase.FileItemIteratorImpl#FileItemIteratorImpl</code>函数中</p>
+<h2 id="具体分析"><a href="#具体分析" class="headerlink" title="具体分析"></a>具体分析</h2><h3 id="multipart解析"><a href="#multipart解析" class="headerlink" title="multipart解析"></a>multipart解析</h3><h4 id="multipart-前缀绕过"><a href="#multipart-前缀绕过" class="headerlink" title="multipart&#x2F;前缀绕过"></a>multipart&#x2F;前缀绕过</h4><p>在解析之前通过上下文获取Content-Type头，然后通过判断其内容是否为<code>multipart/</code>开头，如果是则继续后续的逻辑<img src="/2024/10/01/commons-fileupload-bypasswaf/image-20241001151415600.png" alt="image-20241001151415600"></p>
+<p>所以我们可以通过添加多余空格的方式绕过：<code>Content-Type: multipart/ form-data; </code>之前的WAF绕过用的正是这个技巧</p>
+<p><img src="/2024/10/01/commons-fileupload-bypasswaf/image-20241001152038079.png" alt="image-20241001152038079"></p>
+<h4 id="大小写混合绕过"><a href="#大小写混合绕过" class="headerlink" title="大小写混合绕过"></a>大小写混合绕过</h4><p>同时可以看到，在进行比较的时候，组件对Content-Type的值统一转换成了小写，所以可以进行大小写的变形：<code>Content-Type: MulTIPaRt/form-data;</code> </p>
+<p><img src="/2024/10/01/commons-fileupload-bypasswaf/image-20241001152223517.png" alt="image-20241001152223517"></p>
+<h4 id="boundary解析"><a href="#boundary解析" class="headerlink" title="boundary解析"></a>boundary解析</h4><h5 id="分割符"><a href="#分割符" class="headerlink" title="分割符"></a>分割符</h5><p>在bounndary相关解析逻辑中：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">org.apache.commons.fileupload.FileUploadBase#getBoundary</span><br><span class="line">org.apache.commons.fileupload.ParameterParser#parse(java.lang.String, char[])</span><br><span class="line">org.apache.commons.fileupload.ParameterParser#parse(java.lang.String, char)</span><br><span class="line">org.apache.commons.fileupload.ParameterParser#parse(char[], int, int, char)</span><br></pre></td></tr></table></figure>
+
+<p>将Content-Type的内容解析成key-value参数，在这个过程中以<code>;</code>、<code>,</code>以及<code>=</code>作为分割符号</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">protected</span> <span class="type">byte</span>[] getBoundary(String contentType) &#123;</span><br><span class="line">        <span class="type">ParameterParser</span> <span class="variable">parser</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ParameterParser</span>();</span><br><span class="line">        parser.setLowerCaseNames(<span class="literal">true</span>);</span><br><span class="line">        Map&lt;String, String&gt; params = parser.parse(contentType, <span class="keyword">new</span> <span class="title class_">char</span>[]&#123;<span class="string">&#x27;;&#x27;</span>, <span class="string">&#x27;,&#x27;</span>&#125;);</span><br><span class="line">        <span class="type">String</span> <span class="variable">boundaryStr</span> <span class="operator">=</span> (String)params.get(<span class="string">&quot;boundary&quot;</span>);</span><br><span class="line">        <span class="keyword">if</span> (boundaryStr == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="type">byte</span>[] boundary;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                boundary = boundaryStr.getBytes(<span class="string">&quot;ISO-8859-1&quot;</span>);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (UnsupportedEncodingException var7) &#123;</span><br><span class="line">                boundary = boundaryStr.getBytes();</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">return</span> boundary;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>根据<code>org.apache.commons.fileupload.ParameterParser#parse(java.lang.String, char[])</code>的逻辑中，选择<code>;</code>和<code>,</code>中第一个出现的字符作为分割符，并且由于后续的代码逻辑，如果添加多个分割符的话需要需要保证第一个和最后一个均为合法的分割符号</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> Map&lt;String, String&gt; <span class="title function_">parse</span><span class="params">(String str, <span class="type">char</span>[] separators)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (separators != <span class="literal">null</span> &amp;&amp; separators.length != <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="type">char</span> <span class="variable">separator</span> <span class="operator">=</span> separators[<span class="number">0</span>];</span><br><span class="line">            <span class="keyword">if</span> (str != <span class="literal">null</span>) &#123;</span><br><span class="line">                <span class="type">int</span> <span class="variable">idx</span> <span class="operator">=</span> str.length();</span><br><span class="line">                <span class="type">char</span>[] var5 = separators;</span><br><span class="line">                <span class="type">int</span> <span class="variable">var6</span> <span class="operator">=</span> separators.length;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">for</span>(<span class="type">int</span> <span class="variable">var7</span> <span class="operator">=</span> <span class="number">0</span>; var7 &lt; var6; ++var7) &#123;</span><br><span class="line">                    <span class="type">char</span> <span class="variable">separator2</span> <span class="operator">=</span> var5[var7];</span><br><span class="line">                    <span class="type">int</span> <span class="variable">tmp</span> <span class="operator">=</span> str.indexOf(separator2);</span><br><span class="line">                    <span class="keyword">if</span> (tmp != -<span class="number">1</span> &amp;&amp; tmp &lt; idx) &#123;</span><br><span class="line">                        idx = tmp;</span><br><span class="line">                        separator = separator2;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">return</span> <span class="built_in">this</span>.parse(str, separator);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">HashMap</span>();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>比如，我选择多个<code>,</code>作作为分割符，可以这样</p>
+<p><code>Content-Type: multipart/form-data,,,;;;;,hello-world,,;;;;;,,,,boundary=------------------------7jqxUg1tWaweeuyRNJxBrB</code></p>
+<p><img src="/2024/10/01/commons-fileupload-bypasswaf/image-20241008110332390.png" alt="image-20241008110332390"></p>
+<p>选择<code>;</code>作为分割符，可以这样：<code>Content-Type: multipart/form-data;;;;;,,,,,,====,,;;;;;boundary=------------------------7jqxUg1tWaweeuyRNJxBrB</code></p>
+<p><img src="/2024/10/01/commons-fileupload-bypasswaf/image-20241008111734809.png" alt="image-20241008111734809"></p>
+<h5 id="空白字符"><a href="#空白字符" class="headerlink" title="空白字符"></a>空白字符</h5><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">org.apache.commons.fileupload.FileUploadBase#getBoundary</span><br><span class="line">org.apache.commons.fileupload.ParameterParser#parse(java.lang.String, char[])</span><br><span class="line">org.apache.commons.fileupload.ParameterParser#parse(char[], char)</span><br><span class="line">org.apache.commons.fileupload.ParameterParser#parse(char[], int, int, char)</span><br><span class="line">org.apache.commons.fileupload.ParameterParser#parseToken</span><br><span class="line">org.apache.commons.fileupload.ParameterParser#getToken</span><br></pre></td></tr></table></figure>
+
+<p>org.apache.commons.fileupload.ParameterParser#getToken函数扫描Content-Type内容</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> String <span class="title function_">getToken</span><span class="params">(<span class="type">boolean</span> quoted)</span> &#123;</span><br><span class="line">    <span class="comment">// 从左到右扫描遇到空白字符就跳过，最终确定左边界</span></span><br><span class="line">        <span class="keyword">while</span>(<span class="built_in">this</span>.i1 &lt; <span class="built_in">this</span>.i2 &amp;&amp; Character.isWhitespace(<span class="built_in">this</span>.chars[<span class="built_in">this</span>.i1])) &#123;</span><br><span class="line">            ++<span class="built_in">this</span>.i1;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 从右到右左描遇到空白字符就跳过，最终确定右边界</span></span><br><span class="line">        <span class="keyword">while</span>(<span class="built_in">this</span>.i2 &gt; <span class="built_in">this</span>.i1 &amp;&amp; Character.isWhitespace(<span class="built_in">this</span>.chars[<span class="built_in">this</span>.i2 - <span class="number">1</span>])) &#123;</span><br><span class="line">            --<span class="built_in">this</span>.i2;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (quoted &amp;&amp; <span class="built_in">this</span>.i2 - <span class="built_in">this</span>.i1 &gt;= <span class="number">2</span> &amp;&amp; <span class="built_in">this</span>.chars[<span class="built_in">this</span>.i1] == <span class="string">&#x27;&quot;&#x27;</span> &amp;&amp; <span class="built_in">this</span>.chars[<span class="built_in">this</span>.i2 - <span class="number">1</span>] == <span class="string">&#x27;&quot;&#x27;</span>) &#123;</span><br><span class="line">            ++<span class="built_in">this</span>.i1;</span><br><span class="line">            --<span class="built_in">this</span>.i2;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="type">String</span> <span class="variable">result</span> <span class="operator">=</span> <span class="literal">null</span>;</span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">this</span>.i2 &gt; <span class="built_in">this</span>.i1) &#123;</span><br><span class="line">            result = <span class="keyword">new</span> <span class="title class_">String</span>(<span class="built_in">this</span>.chars, <span class="built_in">this</span>.i1, <span class="built_in">this</span>.i2 - <span class="built_in">this</span>.i1);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>所以理论上multipar&#x2F;formdata可以添加任意空白字符串，但由于大部分会破坏http数据包结构只能添加空格</p>
+<p><img src="/2024/10/01/commons-fileupload-bypasswaf/image-20241001162124816.png" alt="image-20241001162124816"></p>
+<p>最终payloa如下、</p>
+<p><code>Content-Type:  MulTIPaRt/form-data         ;</code></p>
+<p><img src="/2024/10/01/commons-fileupload-bypasswaf/image-20241001162228208.png" alt="image-20241001162228208"></p>
+<h3 id="属性解析"><a href="#属性解析" class="headerlink" title="属性解析"></a>属性解析</h3><h4 id="form-data前缀绕过"><a href="#form-data前缀绕过" class="headerlink" title="form-data前缀绕过"></a>form-data前缀绕过</h4><p>org.apache.commons.fileupload.FileUploadBase#getFieldName(java.lang.String)，同样支持大小写</p>
+<p><img src="/2024/10/01/commons-fileupload-bypasswaf/image-20241008114250213.png" alt="image-20241008114250213"></p>
+<h4 id="MIMI编码绕过"><a href="#MIMI编码绕过" class="headerlink" title="MIMI编码绕过"></a>MIMI编码绕过</h4><p>接下来就是解析header头参数，这部分key-value的解析逻辑和前面一致</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span>(<span class="built_in">this</span>.hasChar()) &#123;</span><br><span class="line">                paramName = <span class="built_in">this</span>.parseToken(<span class="keyword">new</span> <span class="title class_">char</span>[]&#123;<span class="string">&#x27;=&#x27;</span>, separator&#125;);</span><br><span class="line">                paramValue = <span class="literal">null</span>;</span><br><span class="line">                <span class="keyword">if</span> (<span class="built_in">this</span>.hasChar() &amp;&amp; charArray[<span class="built_in">this</span>.pos] == <span class="string">&#x27;=&#x27;</span>) &#123;</span><br><span class="line">                    ++<span class="built_in">this</span>.pos;</span><br><span class="line">                    paramValue = <span class="built_in">this</span>.parseQuotedToken(<span class="keyword">new</span> <span class="title class_">char</span>[]&#123;separator&#125;);</span><br><span class="line">                    <span class="keyword">if</span> (paramValue != <span class="literal">null</span>) &#123;</span><br><span class="line">                        <span class="keyword">try</span> &#123;</span><br><span class="line">                            paramValue = MimeUtility.decodeText(paramValue);</span><br><span class="line">                        &#125; <span class="keyword">catch</span> (UnsupportedEncodingException var9) &#123;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br></pre></td></tr></table></figure>
+
+<p>不过这里需要多关注value的解析，详细的细节可以参考<a target="_blank" rel="noopener" href="https://y4tacker.github.io/2022/02/25/year/2022/2/Java%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0%E5%A4%A7%E6%9D%80%E5%99%A8-%E7%BB%95waf(%E9%92%88%E5%AF%B9commons-fileupload%E7%BB%84%E4%BB%B6)/">y4tacker的文章</a>，作为value解析的地方都可以进行编码，比如：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">Content-Disposition</span><span class="punctuation">: </span>form-data; name=&quot;file&quot;; filename=&quot;=?utf-8?B?dGVzdC50eHQ=?=&quot;</span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>image/png</span><br></pre></td></tr></table></figure>
+
+<h4 id="省略filename参数"><a href="#省略filename参数" class="headerlink" title="省略filename参数"></a>省略filename参数</h4><p>在函数<code>org.apache.commons.fileupload.FileUploadBase#getFileName(java.lang.String)</code>中，可以看到，如果没有传入filename参数，那么最终返回的是null，而文件仍然可以上传，只不过保存的文件名会变成null</p>
+<p><img src="/2024/10/01/commons-fileupload-bypasswaf/image-20241008134715333.png" alt="image-20241008134715333"></p>
+<p><img src="/2024/10/01/commons-fileupload-bypasswaf/image-20241008134748784.png" alt="image-20241008134748784"></p>
+<p><img src="/2024/10/01/commons-fileupload-bypasswaf/image-20241008134830689.png" alt="image-20241008134830689"></p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>根据commons-fileupload的解析特性，总结可能可以用于绕过WAF的方式：</p>
+<ol>
+<li><p>格式前缀绕过</p>
+<p>Content-Type以<code>multipart/</code>开头，Content-Disposition以<code>form-data</code>开头，后面可以添加额外的内容进行绕过，比如</p>
+<ul>
+<li><code>Content-Type:      multipart/helloform-data;boundary=------------------------7jqxUg1tWaweeuyRNJxBrB</code></li>
+<li><code>Content-Disposition:form-datahello; name=&quot;file&quot;; filename=&quot;test.txt&quot;</code></li>
+</ul>
+</li>
+<li><p>Key的大小写绕过以及空白字符</p>
+<p>数据包中作为Key被解析的部分，比如<code>multipart/form-data</code>、<code>boundary</code>、以及name、filename这些属性值本身，在解析时会统一转成小写，所以可以利用大小写混用绕过；以及扫描key、value过程中会跳过空白字符，比如：</p>
+<p><code>Content-Disposition:    form-data; name=&quot;file&quot;; FILENAME      =  &quot;test.txt&quot;</code></p>
+</li>
+<li><p>分割符绕过</p>
+<p>key，value的解析是依据<code>；</code>、<code>,</code>以及<code>=</code>等符号，所以可以利用多个分割符进行绕过，需要注意的是，http header头中第一个和最后一个分割符必须统一，比如均为<code>;</code>或者<code>,</code>：</p>
+<ul>
+<li><code>Content-Type:      multipart/form-data;;;====,,,,,===;;;;boundary=------------------------7jqxUg1tWaweeuyRNJxBrB</code></li>
+</ul>
+<p>而multipart属性中分隔符只能用<code>;</code>：</p>
+<ul>
+<li><code>Content-Disposition:form-data;NAME=&quot;file&quot;;---;FILENAME=&quot;test.txt&quot;</code></li>
+</ul>
+</li>
+<li><p>value中的MIME编码</p>
+<ul>
+<li>例如：<code>Content-Disposition: form-data; name=&quot;file&quot;; filename=&quot;=?utf-8?B?dGVzdC50eHQ=?=&quot;</code></li>
+</ul>
+</li>
+<li><p>省略filename参数名，上传后为null</p>
+</li>
+</ol>
+
+  </div>
+</article>
+
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+        
+          <li><a href="/">首页</a></li>
+        
+          <li><a href="/about/">关于</a></li>
+        
+          <li><a href="/archives/">归档</a></li>
+        
+          <li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li>
+        
+      </ul>
+    </div>
+
+    
+    
+      <div id="toc-footer" style="display: none">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%B4%E4%BD%93%E8%BF%87%E7%A8%8B"><span class="toc-number">1.</span> <span class="toc-text">整体过程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%B7%E4%BD%93%E5%88%86%E6%9E%90"><span class="toc-number">2.</span> <span class="toc-text">具体分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#multipart%E8%A7%A3%E6%9E%90"><span class="toc-number">2.1.</span> <span class="toc-text">multipart解析</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#multipart-%E5%89%8D%E7%BC%80%E7%BB%95%E8%BF%87"><span class="toc-number">2.1.1.</span> <span class="toc-text">multipart&#x2F;前缀绕过</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%A4%A7%E5%B0%8F%E5%86%99%E6%B7%B7%E5%90%88%E7%BB%95%E8%BF%87"><span class="toc-number">2.1.2.</span> <span class="toc-text">大小写混合绕过</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#boundary%E8%A7%A3%E6%9E%90"><span class="toc-number">2.1.3.</span> <span class="toc-text">boundary解析</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#%E5%88%86%E5%89%B2%E7%AC%A6"><span class="toc-number">2.1.3.1.</span> <span class="toc-text">分割符</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#%E7%A9%BA%E7%99%BD%E5%AD%97%E7%AC%A6"><span class="toc-number">2.1.3.2.</span> <span class="toc-text">空白字符</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B1%9E%E6%80%A7%E8%A7%A3%E6%9E%90"><span class="toc-number">2.2.</span> <span class="toc-text">属性解析</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#form-data%E5%89%8D%E7%BC%80%E7%BB%95%E8%BF%87"><span class="toc-number">2.2.1.</span> <span class="toc-text">form-data前缀绕过</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#MIMI%E7%BC%96%E7%A0%81%E7%BB%95%E8%BF%87"><span class="toc-number">2.2.2.</span> <span class="toc-text">MIMI编码绕过</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%9C%81%E7%95%A5filename%E5%8F%82%E6%95%B0"><span class="toc-number">2.2.3.</span> <span class="toc-text">省略filename参数</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">3.</span> <span class="toc-text">总结</span></a></li></ol>
+      </div>
+    
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2024/10/01/commons-fileupload-bypasswaf/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&text=commons-fileupload组件解析特性"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&title=commons-fileupload组件解析特性"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&is_video=false&description=commons-fileupload组件解析特性"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=commons-fileupload组件解析特性&body=Check out this article: http://example.com/2024/10/01/commons-fileupload-bypasswaf/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&title=commons-fileupload组件解析特性"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&title=commons-fileupload组件解析特性"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&title=commons-fileupload组件解析特性"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&title=commons-fileupload组件解析特性"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&name=commons-fileupload组件解析特性&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2024/10/01/commons-fileupload-bypasswaf/&t=commons-fileupload组件解析特性"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> 菜单</a>
+        
+          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> 目录</a>
+        
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> 分享</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> 返回顶部</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-left">
+    Copyright &copy;
+    
+    
+    2016-2024
+    runt0
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li><!--
+     -->
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+
+  <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'"/>
+
+
+    <!-- jquery -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous"></script>
+
+
+
+
+<!-- clipboard -->
+
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.7/clipboard.min.js" crossorigin="anonymous"></script>
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"复制到粘贴板！\">";
+    btn += '<i class="fa-regular fa-clone"></i>';
+    btn += '</span>';
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "复制成功！");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+<!-- search -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>

