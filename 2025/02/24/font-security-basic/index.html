@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang=zh>
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="前言去年找工作的时候，面了好几家大厂，在面试过程中发现大厂会比较注重前端安全。而在乙方工作，我发现周围的人无论是客户还是工程师，都比较忽视这类，很多人连漏洞的原理以及修复方式都搞不清楚，包括自己也有一些不清楚的地方。想了一下，一方面可能是因为前端&#x2F;客户端的漏洞从攻击模型来看，往往依赖用户交互，有些攻击场景和修复方式都是基于用户端的，相比于直接攻击服务端来说，不太直观；另一方面也可以归因于">
+<meta property="og:type" content="article">
+<meta property="og:title" content="前端安全基础知识总结">
+<meta property="og:url" content="http://example.com/2025/02/24/font-security-basic/index.html">
+<meta property="og:site_name" content="runt0">
+<meta property="og:description" content="前言去年找工作的时候，面了好几家大厂，在面试过程中发现大厂会比较注重前端安全。而在乙方工作，我发现周围的人无论是客户还是工程师，都比较忽视这类，很多人连漏洞的原理以及修复方式都搞不清楚，包括自己也有一些不清楚的地方。想了一下，一方面可能是因为前端&#x2F;客户端的漏洞从攻击模型来看，往往依赖用户交互，有些攻击场景和修复方式都是基于用户端的，相比于直接攻击服务端来说，不太直观；另一方面也可以归因于">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/2025/02/24/font-security-basic/image-20250223192452275.png">
+<meta property="og:image" content="http://example.com/2025/02/24/font-security-basic/image-20250223192536016.png">
+<meta property="og:image" content="http://example.com/2025/02/24/font-security-basic/image-20250224094359073.png">
+<meta property="og:image" content="http://example.com/2025/02/24/font-security-basic/image-20250224094342403.png">
+<meta property="og:image" content="http://example.com/2025/02/24/font-security-basic/image-20250224095442587.png">
+<meta property="og:image" content="http://example.com/2025/02/24/font-security-basic/image-20250224095455260.png">
+<meta property="og:image" content="http://example.com/2025/02/24/font-security-basic/image-20250223213103597.png">
+<meta property="og:image" content="http://example.com/2025/02/24/font-security-basic/image-20250224101446060.png">
+<meta property="og:image" content="http://example.com/2025/02/24/font-security-basic/image-20250224102100510.png">
+<meta property="article:published_time" content="2025-02-24T04:49:43.000Z">
+<meta property="article:modified_time" content="2025-02-24T04:49:43.651Z">
+<meta property="article:author" content="runt0">
+<meta property="article:tag" content="前端安全">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2025/02/24/font-security-basic/image-20250223192452275.png">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/favicon.ico">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/favicon-192x192.png" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+        
+      
+    
+    <!-- title -->
+    <title>前端安全基础知识总结</title>
+    <!-- async scripts -->
+    <!-- Google Analytics -->
+
+
+    <!-- Umami Analytics -->
+
+
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="顶部" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li><!--
+     -->
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        
+        <li><a class="icon" aria-label="下一篇" href="/2024/10/01/commons-fileupload-bypasswaf/"><i class="fa-solid fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
+        
+        <li><a class="icon" aria-label="返回顶部" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="分享文章" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">上一篇</span>
+      <span id="i-next" class="info" style="display:none;">下一篇</span>
+      <span id="i-top" class="info" style="display:none;">返回顶部</span>
+      <span id="i-share" class="info" style="display:none;">分享文章</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2025/02/24/font-security-basic/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2025/02/24/font-security-basic/&text=前端安全基础知识总结"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2025/02/24/font-security-basic/&title=前端安全基础知识总结"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2025/02/24/font-security-basic/&is_video=false&description=前端安全基础知识总结"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=前端安全基础知识总结&body=Check out this article: http://example.com/2025/02/24/font-security-basic/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2025/02/24/font-security-basic/&title=前端安全基础知识总结"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2025/02/24/font-security-basic/&title=前端安全基础知识总结"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2025/02/24/font-security-basic/&title=前端安全基础知识总结"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2025/02/24/font-security-basic/&title=前端安全基础知识总结"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2025/02/24/font-security-basic/&name=前端安全基础知识总结&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2025/02/24/font-security-basic/&t=前端安全基础知识总结"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    
+    
+      <div id="toc">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B5%8F%E8%A7%88%E5%99%A8%E5%90%8C%E6%BA%90%E7%AD%96%E7%95%A5"><span class="toc-number">2.</span> <span class="toc-text">浏览器同源策略</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%B7%A8%E6%BA%90%E7%BD%91%E7%BB%9C%E8%AE%BF%E9%97%AE"><span class="toc-number">3.</span> <span class="toc-text">跨源网络访问</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AE%80%E5%8D%95%E8%AF%B7%E6%B1%82"><span class="toc-number">3.1.</span> <span class="toc-text">简单请求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9C%80%E9%A2%84%E6%A3%80%E7%9A%84%E8%AF%B7%E6%B1%82"><span class="toc-number">3.2.</span> <span class="toc-text">需预检的请求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%90%BA%E5%B8%A6Cookie%E7%9A%84%E8%B7%A8%E6%BA%90%E8%AE%BF%E9%97%AE"><span class="toc-number">3.3.</span> <span class="toc-text">携带Cookie的跨源访问</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Cookie%E5%AE%89%E5%85%A8%E5%B1%9E%E6%80%A7"><span class="toc-number">4.</span> <span class="toc-text">Cookie安全属性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">5.</span> <span class="toc-text">参考</span></a></li></ol>
+      </div>
+    
+  </span>
+</div>
+
+    
+    <div class="content index py4 ">
+        
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle p-name" itemprop="name headline">
+        前端安全基础知识总结
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span class="p-name" itemprop="name">runt0</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2025-02-24T04:49:43.000Z" class="dt-published" itemprop="datePublished">24 02 2025</time>
+        
+      
+    </div>
+
+
+      
+
+      
+    <div class="article-tag">
+        <i class="fa-solid fa-tag"></i>
+        <a class="p-category" href="/tags/%E5%89%8D%E7%AB%AF%E5%AE%89%E5%85%A8/" rel="tag">前端安全</a>
+    </div>
+
+
+    </div>
+  </header>
+  
+
+  <div class="content e-content" itemprop="articleBody">
+    <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>去年找工作的时候，面了好几家大厂，在面试过程中发现大厂会比较注重前端安全。而在乙方工作，我发现周围的人无论是客户还是工程师，都比较忽视这类，很多人连漏洞的原理以及修复方式都搞不清楚，包括自己也有一些不清楚的地方。想了一下，一方面可能是因为前端&#x2F;客户端的漏洞从攻击模型来看，往往依赖用户交互，有些攻击场景和修复方式都是基于用户端的，相比于直接攻击服务端来说，不太直观；另一方面也可以归因于人的浮躁。于是准备写一些文章，站在应用安全的角度梳理前端相关的安全问题，这篇文章主要设置前端安全的一些基础知识。</p>
+<h2 id="浏览器同源策略"><a href="#浏览器同源策略" class="headerlink" title="浏览器同源策略"></a>浏览器同源策略</h2><p>所谓同源即对于URL来说，同协议、同主机、同端口即是同源。站在安全的角度，同源策略的限制主要是指跨源网络访问和跨源数据存储访问。跨域数据访问好理解，A站点上面JavaScript脚本无法读取到B站点上的类似<code>Cookie</code>、<code>LocalStorage</code>的数据；跨源网络访问即利用JavaScript发起HTTP请求，请求的目标地址和当前脚本的URL是非同源的，这个过程根据具体情况会收到一些限制，具体由CORS机制决定。而无论站在开发还是安全的视角，要解决问题就是什么情况下可以进行跨源请求，并携带资源（<code>Cookie</code>、<code>LocalStorage</code>等）。</p>
+<h2 id="跨源网络访问"><a href="#跨源网络访问" class="headerlink" title="跨源网络访问"></a>跨源网络访问</h2><p>前端的一些安全配置往往是针对浏览器的，为了便于理解浏览器的工作效果，我编写了一个简单的demo，用于验证各种安全配置对浏览器的影响，方便理解：</p>
+<p>首先是服务端A（<a target="_blank" rel="noopener" href="http://127.0.0.1:9999/cross_source_request.html%EF%BC%89%EF%BC%8C%E7%94%A8%E4%BA%8E%E5%90%91%E7%94%A8%E6%88%B7%E6%8F%90%E4%BE%9B%E9%A1%B5%E9%9D%A2%EF%BC%9A">http://127.0.0.1:9999/cross_source_request.html），用于向用户提供页面：</a></p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">&lt;script&gt;</span><br><span class="line">    <span class="keyword">const</span> req = <span class="keyword">new</span> <span class="title class_">XMLHttpRequest</span>()</span><br><span class="line">    <span class="keyword">const</span> url = <span class="string">&quot;https://192.168.98.1:5000/hello&quot;</span></span><br><span class="line">    req.<span class="title function_">open</span>(<span class="string">&quot;GET&quot;</span>,url,<span class="literal">true</span>)</span><br><span class="line">    req.<span class="title function_">setRequestHeader</span>(<span class="string">&quot;Authorization&quot;</span>,<span class="string">&quot;this_is_a_secret&quot;</span>)</span><br><span class="line">    req.<span class="property">onreadystatechange</span> = <span class="keyword">function</span> (<span class="params"></span>)&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="variable language_">this</span>.<span class="property">readyState</span> == <span class="number">4</span> &amp;&amp; <span class="variable language_">this</span>.<span class="property">status</span> == <span class="number">200</span>)&#123;</span><br><span class="line">            <span class="variable language_">console</span>.<span class="title function_">log</span>(req.<span class="property">responseText</span>)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    req.<span class="title function_">send</span>();</span><br><span class="line">&lt;/script&gt;</span><br></pre></td></tr></table></figure>
+
+<p>其次是服务端B（<a target="_blank" rel="noopener" href="https://192.168.98.1:5000/%EF%BC%89%EF%BC%8C%E7%94%A8%E4%BA%8E%E6%8F%90%E4%BE%9B%E5%AE%9E%E9%99%85%E7%9A%84%E6%8E%A5%E5%8F%A3%E6%9C%8D%E5%8A%A1%EF%BC%9A">https://192.168.98.1:5000/），用于提供实际的接口服务：</a></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> flask <span class="keyword">import</span> Flask, make_response, request</span><br><span class="line"></span><br><span class="line">app = Flask(__name__)</span><br><span class="line"></span><br><span class="line"><span class="meta">@app.route(<span class="params"><span class="string">&quot;/auth&quot;</span>,methods=[<span class="string">&quot;GET&quot;</span>]</span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">auth</span>():</span><br><span class="line">    response = make_response(<span class="string">&#x27;&#x27;</span>, <span class="number">200</span>)</span><br><span class="line">    response.set_cookie(<span class="string">&#x27;session&#x27;</span>, <span class="string">&quot;5d41402abc4b2a76b9719d911017c592&quot;</span>,samesite=<span class="string">&#x27;None&#x27;</span>,secure=<span class="literal">True</span>)</span><br><span class="line">    <span class="keyword">return</span> response</span><br><span class="line"></span><br><span class="line"><span class="meta">@app.route(<span class="params"><span class="string">&quot;/hello&quot;</span>,methods=[<span class="string">&quot;GET&quot;</span>,<span class="string">&quot;POST&quot;</span>,<span class="string">&quot;OPTIONS&quot;</span>]</span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">hello</span>():</span><br><span class="line">    response = make_response(<span class="string">&quot;hello&quot;</span>)</span><br><span class="line">    <span class="keyword">return</span> response</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    app.run(ssl_context=(<span class="string">&#x27;server.crt&#x27;</span>, <span class="string">&#x27;server.key&#x27;</span>),host=<span class="string">&#x27;0.0.0.0&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>可以观察到两个服务是不同源的，在服务端A的JavaScript代码与服务端B的接口交互时，会涉及到跨域相关的问题，并且注意到我将服务端B的http服务配置了ssl证书，这涉及到后续介绍的一些浏览器配置要求，先暂时不提，如何给flask配置ssl可以参考<a target="_blank" rel="noopener" href="https://medium.com/@charming_rust_oyster_221/flask-%E9%85%8D%E7%BD%AE-https-%E7%B6%B2%E7%AB%99-ssl-%E5%AE%89%E5%85%A8%E8%AA%8D%E8%AD%89-36dfeb609fa8">这篇文章</a>。</p>
+<h3 id="简单请求"><a href="#简单请求" class="headerlink" title="简单请求"></a>简单请求</h3><p>结合<a target="_blank" rel="noopener" href="https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS">跨源资源共享（CORS）</a>和<a target="_blank" rel="noopener" href="https://developer.mozilla.org/zh-CN/docs/Web/Security/Same-origin_policy">浏览器的同源策略</a>的内容，总结可以跨源的情况。首先是不受同源策略的限制的情况：</p>
+<ol>
+<li><p>跨源写操作：比如链接、重定向以及表单提交（这也解释了为什么常见的BurpSuite生成的CSRF POC可以起作用）</p>
+</li>
+<li><p>跨源的资源嵌入：<img src="/2025/02/24/font-security-basic/image-20250223192452275.png" alt="image-20250223192452275"></p>
+</li>
+<li><p>简单请求（即满足以下所有要求的请求）：<img src="/2025/02/24/font-security-basic/image-20250223192536016.png" alt="image-20250223192536016"></p>
+</li>
+</ol>
+<p>可以看到简单请求的定义非常的苛刻，实际上现代Web开发过程中会频繁的涉及到跨域问题。在我们的demo中，因为存在自定义的非标准头（<code>Authorization</code>），所以这是一个非简单请求，受到浏览器限制，无法成功请求。实际上浏览器发起了一个<code>OPTIONS</code>请求，但是没有发出我们期望的<code>GET</code>请求</p>
+<p><img src="/2025/02/24/font-security-basic/image-20250224094359073.png" alt="image-20250224094359073"><img src="/2025/02/24/font-security-basic/image-20250224094342403.png" alt="image-20250224094342403"></p>
+<p>可以看到默认情况下，浏览器限制了对于跨源站点的请求。那么对于跨源的情况，如何发送请求呢？</p>
+<h3 id="需预检的请求"><a href="#需预检的请求" class="headerlink" title="需预检的请求"></a>需预检的请求</h3><p>实际上就是依靠第一个<code>OPTIONS</code>方法的预检请求，根据此时服务器返回的配置信息来指示浏览器是否发起跨源请求。这里经常会有一道经典的面试题，A站点上的JavaScript向B站点发送跨域请求，为了让跨域逻辑正常运行，应该在哪个站点上进行CORS配置，答案是在被请求的站点上进行配置，因为资源是在被请求的站点上。控制跨域请求的常见的响应头如下：</p>
+<ul>
+<li>Access-Control-Allow-Origin：允许跨域请求的源（*代表任何源都可以请求，也可以指定具体的源）</li>
+<li>Access-Control-Allow-Credentials：是否可以携带对应站点的凭据</li>
+<li>Access-Control-Allow-Methods：真正请求时允许使用的方法</li>
+<li>Access-Control-Allow-Headers：实际请求中允许携带的标头字段</li>
+<li>Access-Control-Allow-Credentials：是否允许携带被访问站点的Cookie</li>
+</ul>
+<p>在上一个例子中，可以在浏览器中看到报错信息，由于服务器缺少<code>Access-Control-Allow-Origin</code>的配置导致浏览器拒绝了跨源的请求</p>
+<blockquote>
+<p>Access to XMLHttpRequest at ‘<a target="_blank" rel="noopener" href="https://192.168.98.1:5000/hello">https://192.168.98.1:5000/hello</a>‘ from origin ‘<a target="_blank" rel="noopener" href="http://127.0.0.1:9999/">http://127.0.0.1:9999</a>‘ has been blocked by CORS policy: Response to preflight request doesn’t pass access control check: No ‘Access-Control-Allow-Origin’ header is present on the requested resource</p>
+</blockquote>
+<p>那么现在我们来修改代码，来让上一个例子中的JavaScript可以发起跨域请求，并读取到响应：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@app.route(<span class="params"><span class="string">&quot;/hello&quot;</span>,methods=[<span class="string">&quot;GET&quot;</span>,<span class="string">&quot;POST&quot;</span>,<span class="string">&quot;OPTIONS&quot;</span>]</span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">hello</span>():</span><br><span class="line">    response = make_response(<span class="string">&quot;hello&quot;</span>)</span><br><span class="line">    <span class="comment"># 任何源都可以发起请求</span></span><br><span class="line">    response.headers[<span class="string">&#x27;Access-Control-Allow-Origin&#x27;</span>] = <span class="string">&#x27;*&#x27;</span></span><br><span class="line">    <span class="comment"># 允许发起具体的请求的方法</span></span><br><span class="line">    response.headers[<span class="string">&#x27;Access-Control-Allow-Methods&#x27;</span>] = <span class="string">&#x27;GET&#x27;</span></span><br><span class="line">    <span class="comment"># 允许携带的非标准的头</span></span><br><span class="line">    response.headers[<span class="string">&#x27;Access-Control-Allow-Headers&#x27;</span>] = <span class="string">&#x27;Authorization&#x27;</span></span><br><span class="line">    <span class="keyword">return</span> response</span><br></pre></td></tr></table></figure>
+
+<p>现在开始测试，我们先访问，端点（<code>http://192.168.98.1:9999/auth</code>）获取Cookie，在有Cookie的状态访问站点（<code>http://192.168.98.1:9999/cross_source_request.html</code>），成功发起了跨源请求并读取到了响应值。</p>
+<p><img src="/2025/02/24/font-security-basic/image-20250224095442587.png" alt="image-20250224095442587"><img src="/2025/02/24/font-security-basic/image-20250224095455260.png" alt="image-20250224095455260"></p>
+<h3 id="携带Cookie的跨源访问"><a href="#携带Cookie的跨源访问" class="headerlink" title="携带Cookie的跨源访问"></a>携带Cookie的跨源访问</h3><p>在实际的开发过程中除了携带自定义的Header头部，我们也会遇到需要携带Cookie得到情况，那么如何携带Cookie进行跨源访问呢，需要满足两个条件：</p>
+<ul>
+<li><code>XMLHttpRequest</code>等请求的API中设置类似<code>withCredentials</code>选项为true，意为让请求时自动携带Cookie；</li>
+<li>同时在预见请求阶段，需要被跨源的站点给出一些配置，告诉浏览器允许在携带Cookie的情况下进行跨源请求，具体的配置如下<img src="/2025/02/24/font-security-basic/image-20250223213103597.png" alt="image-20250223213103597"></li>
+</ul>
+<p>那么此时我们来修改代码，让demo能够进行携带Cookie的跨源请求，给服务端A添加一行<code>req.withCredentials = true</code></p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">&lt;script&gt;</span><br><span class="line">    <span class="keyword">const</span> req = <span class="keyword">new</span> <span class="title class_">XMLHttpRequest</span>()</span><br><span class="line">    <span class="keyword">const</span> url = <span class="string">&quot;https://192.168.98.1:5000/hello&quot;</span></span><br><span class="line">    req.<span class="title function_">open</span>(<span class="string">&quot;GET&quot;</span>,url,<span class="literal">true</span>)</span><br><span class="line">    <span class="comment">// 自动携带Cookie</span></span><br><span class="line">    req.<span class="property">withCredentials</span> = <span class="literal">true</span></span><br><span class="line">    req.<span class="title function_">setRequestHeader</span>(<span class="string">&quot;Authorization&quot;</span>,<span class="string">&quot;this_is_a_secret&quot;</span>)</span><br><span class="line">    req.<span class="property">onreadystatechange</span> = <span class="keyword">function</span> (<span class="params"></span>)&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="variable language_">this</span>.<span class="property">readyState</span> == <span class="number">4</span> &amp;&amp; <span class="variable language_">this</span>.<span class="property">status</span> == <span class="number">200</span>)&#123;</span><br><span class="line">            <span class="variable language_">console</span>.<span class="title function_">log</span>(req.<span class="property">responseText</span>)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    req.<span class="title function_">send</span>();</span><br><span class="line">&lt;/script&gt;</span><br></pre></td></tr></table></figure>
+
+<p>修改服务端B代码，设置<code>Access-Control-Allow-Credentials</code>字段为true，并且指定<code>Access-Control-Allow-Origin</code>为一个具体的源</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@app.route(<span class="params"><span class="string">&quot;/hello&quot;</span>,methods=[<span class="string">&quot;GET&quot;</span>,<span class="string">&quot;POST&quot;</span>,<span class="string">&quot;OPTIONS&quot;</span>]</span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">hello</span>():</span><br><span class="line">    response = make_response(<span class="string">&quot;hello&quot;</span>)</span><br><span class="line">    <span class="comment"># 允许携带Cookie</span></span><br><span class="line">    response.headers[<span class="string">&#x27;Access-Control-Allow-Credentials&#x27;</span>] = <span class="string">&#x27;true&#x27;</span></span><br><span class="line">    <span class="comment"># 任何源都可以发起请求</span></span><br><span class="line">    response.headers[<span class="string">&#x27;Access-Control-Allow-Origin&#x27;</span>] = <span class="string">&#x27;http://127.0.0.1:9999&#x27;</span></span><br><span class="line">    <span class="comment"># 允许发起具体的请求的方法</span></span><br><span class="line">    response.headers[<span class="string">&#x27;Access-Control-Allow-Methods&#x27;</span>] = <span class="string">&#x27;GET&#x27;</span></span><br><span class="line">    <span class="comment"># 允许携带的非标准的头</span></span><br><span class="line">    response.headers[<span class="string">&#x27;Access-Control-Allow-Headers&#x27;</span>] = <span class="string">&#x27;Authorization&#x27;</span></span><br><span class="line">    <span class="keyword">return</span> response</span><br></pre></td></tr></table></figure>
+
+<p>我们查看下效果，可以看到成功携带了Cookie：<img src="/2025/02/24/font-security-basic/image-20250224101446060.png" alt="image-20250224101446060"></p>
+<p>实际上影响Cookie自动携带的因素还有一个，那就是Cookie的属性，在一开始我并没有在demo中设置Cookie属性。而现代浏览器比如Chrome和FireFox，当不设置Cookie的SameSite属性时，默认使用Lax策略，也就是无法跨域提交Cookie，此时你会发现，无论你怎么设置JavaScript请求API以及CORS头部，均无法自动携带Cookie进行跨域请求；所以只能显式的在demo中给Cookie设置上<code>samesite=&#39;None&#39;</code>属性，而现代浏览器又要求当存在<code>samesite=&#39;None&#39;</code>时必须同时设置<code>secure</code>属性，即通过https传输，这也是为什么demo要配置ssl的原因<img src="/2025/02/24/font-security-basic/image-20250224102100510.png" alt="image-20250224102100510"></p>
+<h2 id="Cookie安全属性"><a href="#Cookie安全属性" class="headerlink" title="Cookie安全属性"></a>Cookie安全属性</h2><p>说到Cookie的定义，我想起毕业那会看过的面经，问Cookie和Session的区别，直到今天仍然觉得难蚌为啥要把这俩放一起说，可能是业务开发方向喜欢把这两者放在一起把。相比我比较喜欢BurpSuite插件开发中对Cookie的定义：一种参数。和URL参数、Body参数一样，Cookie也可以看成一种参数，因为他本身就是由一组key和value构成，他存放在浏览器端，而<code>Session</code>、<code>JSESSIONID</code>等，不过是用于鉴权的常用的Cookie参数名罢了。而由于Cookie存放在浏览器端，可以被JavaScript访问，所以就有被窃取的风险，而Cookie属性正是为了告诉浏览器如何处理涉及到Cookie的行为，具体涉及的属性如下：</p>
+<ul>
+<li>Domain 属性：指定了哪些主机可以接受 Cookie，并且Cookie的Domain是不区分端口号的，127.0.0.1:80和127.0.0.1:443被浏览器认为是相同的domain，均为127.0.0.1</li>
+<li>Path 属性：请求的URL必须包括这些路径</li>
+<li>SameSite 属性：是否允许跨站点提交，可以选择三个值<code>Strict</code>（不允许发送第三方Cookie）、<code>Lax</code> （比Strict稍微宽松一点，当导航到第三方站点时可以发送Cookie）和 <code>None</code>（不做限制但Cookie必须通过https传输，即设置Secure属性）</li>
+<li>Secure属性：Cookie只能通过https发送</li>
+<li>HttpOnly属性：设置后JavaScript的<code>document.cookie</code>API无法获取Cookie内容。</li>
+</ul>
+<p>至此，常见的一些前端安全基础配置梳理完毕，当然还有一些比如CSP之类的配置，因为和具体的漏洞，比如XSS相关，就放在另外的文章里。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Cookies">https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Cookies</a></li>
+<li><a target="_blank" rel="noopener" href="https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS">https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS</a></li>
+<li><a target="_blank" rel="noopener" href="https://developer.mozilla.org/zh-CN/docs/Web/Security/Same-origin_policy">https://developer.mozilla.org/zh-CN/docs/Web/Security/Same-origin_policy</a></li>
+<li><a target="_blank" rel="noopener" href="https://developer.mozilla.org/zh-CN/docs/Web/API/XMLHttpRequest/withCredentials">https://developer.mozilla.org/zh-CN/docs/Web/API/XMLHttpRequest/withCredentials</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.ruanyifeng.com/blog/2019/09/cookie-samesite.html">https://www.ruanyifeng.com/blog/2019/09/cookie-samesite.html</a></li>
+</ul>
+
+  </div>
+</article>
+
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+        
+          <li><a href="/">首页</a></li>
+        
+          <li><a href="/about/">关于</a></li>
+        
+          <li><a href="/archives/">归档</a></li>
+        
+          <li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li>
+        
+      </ul>
+    </div>
+
+    
+    
+      <div id="toc-footer" style="display: none">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B5%8F%E8%A7%88%E5%99%A8%E5%90%8C%E6%BA%90%E7%AD%96%E7%95%A5"><span class="toc-number">2.</span> <span class="toc-text">浏览器同源策略</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%B7%A8%E6%BA%90%E7%BD%91%E7%BB%9C%E8%AE%BF%E9%97%AE"><span class="toc-number">3.</span> <span class="toc-text">跨源网络访问</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AE%80%E5%8D%95%E8%AF%B7%E6%B1%82"><span class="toc-number">3.1.</span> <span class="toc-text">简单请求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9C%80%E9%A2%84%E6%A3%80%E7%9A%84%E8%AF%B7%E6%B1%82"><span class="toc-number">3.2.</span> <span class="toc-text">需预检的请求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%90%BA%E5%B8%A6Cookie%E7%9A%84%E8%B7%A8%E6%BA%90%E8%AE%BF%E9%97%AE"><span class="toc-number">3.3.</span> <span class="toc-text">携带Cookie的跨源访问</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Cookie%E5%AE%89%E5%85%A8%E5%B1%9E%E6%80%A7"><span class="toc-number">4.</span> <span class="toc-text">Cookie安全属性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">5.</span> <span class="toc-text">参考</span></a></li></ol>
+      </div>
+    
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2025/02/24/font-security-basic/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2025/02/24/font-security-basic/&text=前端安全基础知识总结"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2025/02/24/font-security-basic/&title=前端安全基础知识总结"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2025/02/24/font-security-basic/&is_video=false&description=前端安全基础知识总结"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=前端安全基础知识总结&body=Check out this article: http://example.com/2025/02/24/font-security-basic/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2025/02/24/font-security-basic/&title=前端安全基础知识总结"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2025/02/24/font-security-basic/&title=前端安全基础知识总结"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2025/02/24/font-security-basic/&title=前端安全基础知识总结"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2025/02/24/font-security-basic/&title=前端安全基础知识总结"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2025/02/24/font-security-basic/&name=前端安全基础知识总结&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2025/02/24/font-security-basic/&t=前端安全基础知识总结"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> 菜单</a>
+        
+          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> 目录</a>
+        
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> 分享</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> 返回顶部</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-left">
+    Copyright &copy;
+    
+    
+    2016-2025
+    runt0
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li><!--
+     -->
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+
+  <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'"/>
+
+
+    <!-- jquery -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous"></script>
+
+
+
+
+<!-- clipboard -->
+
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.7/clipboard.min.js" crossorigin="anonymous"></script>
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"复制到粘贴板！\">";
+    btn += '<i class="fa-regular fa-clone"></i>';
+    btn += '</span>';
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "复制成功！");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+<!-- search -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>
