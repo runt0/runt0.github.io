@@ -22,8 +22,9 @@
 <meta property="og:image" content="http://example.com/2025/02/24/font-security-basic/image-20250223213103597.png">
 <meta property="og:image" content="http://example.com/2025/02/24/font-security-basic/image-20250224101446060.png">
 <meta property="og:image" content="http://example.com/2025/02/24/font-security-basic/image-20250224102100510.png">
+<meta property="og:image" content="http://example.com/2025/02/24/font-security-basic/image-20250227110926312.png">
 <meta property="article:published_time" content="2025-02-24T04:49:43.000Z">
-<meta property="article:modified_time" content="2025-02-24T04:49:43.651Z">
+<meta property="article:modified_time" content="2025-02-27T03:11:00.602Z">
 <meta property="article:author" content="runt0">
 <meta property="article:tag" content="前端安全">
 <meta name="twitter:card" content="summary">
@@ -92,6 +93,8 @@
     <span id="actions">
       <ul>
         
+        <li><a class="icon" aria-label="上一篇" href="/2025/02/27/font-security-csrf/"><i class="fa-solid fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i></a></li>
+        
         
         <li><a class="icon" aria-label="下一篇" href="/2024/10/01/commons-fileupload-bypasswaf/"><i class="fa-solid fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
         
@@ -123,7 +126,7 @@
     
     
       <div id="toc">
-        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B5%8F%E8%A7%88%E5%99%A8%E5%90%8C%E6%BA%90%E7%AD%96%E7%95%A5"><span class="toc-number">2.</span> <span class="toc-text">浏览器同源策略</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%B7%A8%E6%BA%90%E7%BD%91%E7%BB%9C%E8%AE%BF%E9%97%AE"><span class="toc-number">3.</span> <span class="toc-text">跨源网络访问</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AE%80%E5%8D%95%E8%AF%B7%E6%B1%82"><span class="toc-number">3.1.</span> <span class="toc-text">简单请求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9C%80%E9%A2%84%E6%A3%80%E7%9A%84%E8%AF%B7%E6%B1%82"><span class="toc-number">3.2.</span> <span class="toc-text">需预检的请求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%90%BA%E5%B8%A6Cookie%E7%9A%84%E8%B7%A8%E6%BA%90%E8%AE%BF%E9%97%AE"><span class="toc-number">3.3.</span> <span class="toc-text">携带Cookie的跨源访问</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Cookie%E5%AE%89%E5%85%A8%E5%B1%9E%E6%80%A7"><span class="toc-number">4.</span> <span class="toc-text">Cookie安全属性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">5.</span> <span class="toc-text">参考</span></a></li></ol>
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B5%8F%E8%A7%88%E5%99%A8%E5%90%8C%E6%BA%90%E7%AD%96%E7%95%A5"><span class="toc-number">2.</span> <span class="toc-text">浏览器同源策略</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%B7%A8%E6%BA%90%E7%BD%91%E7%BB%9C%E8%AE%BF%E9%97%AE"><span class="toc-number">3.</span> <span class="toc-text">跨源网络访问</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AE%80%E5%8D%95%E8%AF%B7%E6%B1%82"><span class="toc-number">3.1.</span> <span class="toc-text">简单请求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9C%80%E9%A2%84%E6%A3%80%E7%9A%84%E8%AF%B7%E6%B1%82"><span class="toc-number">3.2.</span> <span class="toc-text">需预检的请求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%90%BA%E5%B8%A6Cookie%E7%9A%84%E8%B7%A8%E6%BA%90%E8%AE%BF%E9%97%AE"><span class="toc-number">3.3.</span> <span class="toc-text">携带Cookie的跨源访问</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Site%E5%92%8COrigin"><span class="toc-number">4.</span> <span class="toc-text">Site和Origin</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Cookie%E5%AE%89%E5%85%A8%E5%B1%9E%E6%80%A7"><span class="toc-number">5.</span> <span class="toc-text">Cookie安全属性</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Domain"><span class="toc-number">5.1.</span> <span class="toc-text">Domain</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Path"><span class="toc-number">5.2.</span> <span class="toc-text">Path</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SameSite"><span class="toc-number">5.3.</span> <span class="toc-text">SameSite</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Secure%E5%B1%9E%E6%80%A7"><span class="toc-number">5.4.</span> <span class="toc-text">Secure属性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#HttpOnly%E5%B1%9E%E6%80%A7"><span class="toc-number">5.5.</span> <span class="toc-text">HttpOnly属性</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">6.</span> <span class="toc-text">参考</span></a></li></ol>
       </div>
     
   </span>
@@ -220,14 +223,54 @@
 
 <p>我们查看下效果，可以看到成功携带了Cookie：<img src="/2025/02/24/font-security-basic/image-20250224101446060.png" alt="image-20250224101446060"></p>
 <p>实际上影响Cookie自动携带的因素还有一个，那就是Cookie的属性，在一开始我并没有在demo中设置Cookie属性。而现代浏览器比如Chrome和FireFox，当不设置Cookie的SameSite属性时，默认使用Lax策略，也就是无法跨域提交Cookie，此时你会发现，无论你怎么设置JavaScript请求API以及CORS头部，均无法自动携带Cookie进行跨域请求；所以只能显式的在demo中给Cookie设置上<code>samesite=&#39;None&#39;</code>属性，而现代浏览器又要求当存在<code>samesite=&#39;None&#39;</code>时必须同时设置<code>secure</code>属性，即通过https传输，这也是为什么demo要配置ssl的原因<img src="/2025/02/24/font-security-basic/image-20250224102100510.png" alt="image-20250224102100510"></p>
+<h2 id="Site和Origin"><a href="#Site和Origin" class="headerlink" title="Site和Origin"></a>Site和Origin</h2><p>这一部分是刷完PortSwigger的CSRF的LAB后补充的，主要是区别同站和同源两个概念。同源上面已经介绍过了，同站主要是针对Cookie的，在Cookie中一个SameSite属性，这个属性正是用于限制跨站提交Cookie的行为，所以有必要了解清楚。直接引用PortSwigger的图片：协议和根域名完全一直就是Same Site（同站）否则算Cross Site（跨站）</p>
+<p><img src="/2025/02/24/font-security-basic/image-20250227110926312.png" alt="image-20250227110926312"></p>
+<table>
+<thead>
+<tr>
+<th><strong>Request from</strong></th>
+<th><strong>Request to</strong></th>
+<th><strong>Same-site?</strong></th>
+<th><strong>Same-origin?</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>https://example.com</code></td>
+<td><code>https://example.com</code></td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>https://app.example.com</code></td>
+<td><code>https://intranet.example.com</code></td>
+<td>Yes</td>
+<td>No: mismatched domain name</td>
+</tr>
+<tr>
+<td><code>https://example.com</code></td>
+<td><code>https://example.com:8080</code></td>
+<td>Yes</td>
+<td>No: mismatched port</td>
+</tr>
+<tr>
+<td><code>https://example.com</code></td>
+<td><code>https://example.co.uk</code></td>
+<td>No: mismatched eTLD</td>
+<td>No: mismatched domain name</td>
+</tr>
+<tr>
+<td><code>https://example.com</code></td>
+<td><code>http://example.com</code></td>
+<td>No: mismatched scheme</td>
+<td>No: mismatched scheme</td>
+</tr>
+</tbody></table>
 <h2 id="Cookie安全属性"><a href="#Cookie安全属性" class="headerlink" title="Cookie安全属性"></a>Cookie安全属性</h2><p>说到Cookie的定义，我想起毕业那会看过的面经，问Cookie和Session的区别，直到今天仍然觉得难蚌为啥要把这俩放一起说，可能是业务开发方向喜欢把这两者放在一起把。相比我比较喜欢BurpSuite插件开发中对Cookie的定义：一种参数。和URL参数、Body参数一样，Cookie也可以看成一种参数，因为他本身就是由一组key和value构成，他存放在浏览器端，而<code>Session</code>、<code>JSESSIONID</code>等，不过是用于鉴权的常用的Cookie参数名罢了。而由于Cookie存放在浏览器端，可以被JavaScript访问，所以就有被窃取的风险，而Cookie属性正是为了告诉浏览器如何处理涉及到Cookie的行为，具体涉及的属性如下：</p>
-<ul>
-<li>Domain 属性：指定了哪些主机可以接受 Cookie，并且Cookie的Domain是不区分端口号的，127.0.0.1:80和127.0.0.1:443被浏览器认为是相同的domain，均为127.0.0.1</li>
-<li>Path 属性：请求的URL必须包括这些路径</li>
-<li>SameSite 属性：是否允许跨站点提交，可以选择三个值<code>Strict</code>（不允许发送第三方Cookie）、<code>Lax</code> （比Strict稍微宽松一点，当导航到第三方站点时可以发送Cookie）和 <code>None</code>（不做限制但Cookie必须通过https传输，即设置Secure属性）</li>
-<li>Secure属性：Cookie只能通过https发送</li>
-<li>HttpOnly属性：设置后JavaScript的<code>document.cookie</code>API无法获取Cookie内容。</li>
-</ul>
+<h3 id="Domain"><a href="#Domain" class="headerlink" title="Domain"></a>Domain</h3><p>指定了哪些主机可以接受 Cookie，并且Cookie的Domain是不区分端口号的，127.0.0.1:80和127.0.0.1:443被浏览器认为是相同的domain，均为127.0.0.1</p>
+<h3 id="Path"><a href="#Path" class="headerlink" title="Path"></a>Path</h3><p>请求的URL必须包括这些路径</p>
+<h3 id="SameSite"><a href="#SameSite" class="headerlink" title="SameSite"></a>SameSite</h3><p>在没有SameSite属性前，浏览器在发送每个请求时会自动携带对应站点的Cookie，这样会导致一些安全问题。SameSite属性用于告诉浏览器，在跨站点的请求中是否允许携带Cookie。可以选择三个值<code>Strict</code>（不允许发送第三方Cookie）、<code>Lax</code> （比Strict稍微宽松一点，当导航到第三方站点时可以发送Cookie）和 <code>None</code>（不做限制但Cookie必须通过https传输，即设置Secure属性）</p>
+<h3 id="Secure属性"><a href="#Secure属性" class="headerlink" title="Secure属性"></a>Secure属性</h3><p>Cookie只能通过https发送</p>
+<h3 id="HttpOnly属性"><a href="#HttpOnly属性" class="headerlink" title="HttpOnly属性"></a>HttpOnly属性</h3><p>设置后JavaScript的<code>document.cookie</code>API无法获取Cookie内容。</p>
 <p>至此，常见的一些前端安全基础配置梳理完毕，当然还有一些比如CSP之类的配置，因为和具体的漏洞，比如XSS相关，就放在另外的文章里。</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
 <li><a target="_blank" rel="noopener" href="https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Cookies">https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Cookies</a></li>
@@ -263,7 +306,7 @@
     
     
       <div id="toc-footer" style="display: none">
-        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B5%8F%E8%A7%88%E5%99%A8%E5%90%8C%E6%BA%90%E7%AD%96%E7%95%A5"><span class="toc-number">2.</span> <span class="toc-text">浏览器同源策略</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%B7%A8%E6%BA%90%E7%BD%91%E7%BB%9C%E8%AE%BF%E9%97%AE"><span class="toc-number">3.</span> <span class="toc-text">跨源网络访问</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AE%80%E5%8D%95%E8%AF%B7%E6%B1%82"><span class="toc-number">3.1.</span> <span class="toc-text">简单请求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9C%80%E9%A2%84%E6%A3%80%E7%9A%84%E8%AF%B7%E6%B1%82"><span class="toc-number">3.2.</span> <span class="toc-text">需预检的请求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%90%BA%E5%B8%A6Cookie%E7%9A%84%E8%B7%A8%E6%BA%90%E8%AE%BF%E9%97%AE"><span class="toc-number">3.3.</span> <span class="toc-text">携带Cookie的跨源访问</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Cookie%E5%AE%89%E5%85%A8%E5%B1%9E%E6%80%A7"><span class="toc-number">4.</span> <span class="toc-text">Cookie安全属性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">5.</span> <span class="toc-text">参考</span></a></li></ol>
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B5%8F%E8%A7%88%E5%99%A8%E5%90%8C%E6%BA%90%E7%AD%96%E7%95%A5"><span class="toc-number">2.</span> <span class="toc-text">浏览器同源策略</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%B7%A8%E6%BA%90%E7%BD%91%E7%BB%9C%E8%AE%BF%E9%97%AE"><span class="toc-number">3.</span> <span class="toc-text">跨源网络访问</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AE%80%E5%8D%95%E8%AF%B7%E6%B1%82"><span class="toc-number">3.1.</span> <span class="toc-text">简单请求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9C%80%E9%A2%84%E6%A3%80%E7%9A%84%E8%AF%B7%E6%B1%82"><span class="toc-number">3.2.</span> <span class="toc-text">需预检的请求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%90%BA%E5%B8%A6Cookie%E7%9A%84%E8%B7%A8%E6%BA%90%E8%AE%BF%E9%97%AE"><span class="toc-number">3.3.</span> <span class="toc-text">携带Cookie的跨源访问</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Site%E5%92%8COrigin"><span class="toc-number">4.</span> <span class="toc-text">Site和Origin</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Cookie%E5%AE%89%E5%85%A8%E5%B1%9E%E6%80%A7"><span class="toc-number">5.</span> <span class="toc-text">Cookie安全属性</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Domain"><span class="toc-number">5.1.</span> <span class="toc-text">Domain</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Path"><span class="toc-number">5.2.</span> <span class="toc-text">Path</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SameSite"><span class="toc-number">5.3.</span> <span class="toc-text">SameSite</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Secure%E5%B1%9E%E6%80%A7"><span class="toc-number">5.4.</span> <span class="toc-text">Secure属性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#HttpOnly%E5%B1%9E%E6%80%A7"><span class="toc-number">5.5.</span> <span class="toc-text">HttpOnly属性</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">6.</span> <span class="toc-text">参考</span></a></li></ol>
       </div>
     
 
