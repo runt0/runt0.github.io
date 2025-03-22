@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang=zh>
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="最近在补安卓安全相关的知识，其中Frida动态Hook是一个重要的部分，于是写一篇文章来总结面对不同情况下Frida API的使用方法。 脚本开发环境搭建首先下载官方提供的nodejs项目 123git clone https:&#x2F;&#x2F;github.com&#x2F;oleavr&#x2F;frida-agent-example.gitcd frida-agent-example&#x2F;npm install  使用webst">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Frida API基本使用">
+<meta property="og:url" content="http://example.com/2025/03/22/frida-basic-summary/index.html">
+<meta property="og:site_name" content="runt0">
+<meta property="og:description" content="最近在补安卓安全相关的知识，其中Frida动态Hook是一个重要的部分，于是写一篇文章来总结面对不同情况下Frida API的使用方法。 脚本开发环境搭建首先下载官方提供的nodejs项目 123git clone https:&#x2F;&#x2F;github.com&#x2F;oleavr&#x2F;frida-agent-example.gitcd frida-agent-example&#x2F;npm install  使用webst">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/2025/03/22/frida-basic-summary/image-20250322183445509.png">
+<meta property="og:image" content="http://example.com/2025/03/22/frida-basic-summary/image-20250322183423626.png">
+<meta property="article:published_time" content="2025-03-22T10:37:31.000Z">
+<meta property="article:modified_time" content="2025-03-22T10:37:31.298Z">
+<meta property="article:author" content="runt0">
+<meta property="article:tag" content="frida, 安卓安全">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2025/03/22/frida-basic-summary/image-20250322183445509.png">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/favicon.ico">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/favicon-192x192.png" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+        
+      
+    
+    <!-- title -->
+    <title>Frida API基本使用</title>
+    <!-- async scripts -->
+    <!-- Google Analytics -->
+
+
+    <!-- Umami Analytics -->
+
+
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="顶部" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li><!--
+     -->
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        
+        <li><a class="icon" aria-label="下一篇" href="/2025/02/27/font-security-csrf/"><i class="fa-solid fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
+        
+        <li><a class="icon" aria-label="返回顶部" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="分享文章" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">上一篇</span>
+      <span id="i-next" class="info" style="display:none;">下一篇</span>
+      <span id="i-top" class="info" style="display:none;">返回顶部</span>
+      <span id="i-share" class="info" style="display:none;">分享文章</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2025/03/22/frida-basic-summary/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2025/03/22/frida-basic-summary/&text=Frida API基本使用"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2025/03/22/frida-basic-summary/&title=Frida API基本使用"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2025/03/22/frida-basic-summary/&is_video=false&description=Frida API基本使用"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=Frida API基本使用&body=Check out this article: http://example.com/2025/03/22/frida-basic-summary/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2025/03/22/frida-basic-summary/&title=Frida API基本使用"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2025/03/22/frida-basic-summary/&title=Frida API基本使用"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2025/03/22/frida-basic-summary/&title=Frida API基本使用"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2025/03/22/frida-basic-summary/&title=Frida API基本使用"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2025/03/22/frida-basic-summary/&name=Frida API基本使用&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2025/03/22/frida-basic-summary/&t=Frida API基本使用"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    
+    
+      <div id="toc">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%84%9A%E6%9C%AC%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="toc-number">1.</span> <span class="toc-text">脚本开发环境搭建</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Frida-API%E7%9A%84%E4%BD%BF%E7%94%A8"><span class="toc-number">2.</span> <span class="toc-text">Frida API的使用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Hook%E4%B8%80%E4%B8%AA%E4%B8%8D%E5%B8%A6%E5%8F%82%E6%95%B0%E7%9A%84%E6%88%90%E5%91%98%E6%96%B9%E6%B3%95"><span class="toc-number">2.1.</span> <span class="toc-text">Hook一个不带参数的成员方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Hook%E4%B8%80%E4%B8%AA%E5%B8%A6%E5%8F%82%E6%95%B0%E6%88%90%E5%91%98%E6%96%B9%E6%B3%95"><span class="toc-number">2.2.</span> <span class="toc-text">Hook一个带参数成员方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B0%83%E7%94%A8%E4%B8%80%E4%B8%AA%E7%B1%BB%E7%9A%84%E9%9D%99%E6%80%81%E6%96%B9%E6%B3%95"><span class="toc-number">2.3.</span> <span class="toc-text">调用一个类的静态方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BF%AE%E6%94%B9%E4%B8%80%E4%B8%AA%E7%B1%BB%E7%9A%84%E9%9D%99%E6%80%81%E5%8F%98%E9%87%8F"><span class="toc-number">2.4.</span> <span class="toc-text">修改一个类的静态变量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AA%E7%B1%BB%E7%9A%84%E5%AE%9E%E4%BE%8B%E5%B9%B6%E8%B0%83%E7%94%A8%E4%BB%96%E7%9A%84%E6%88%90%E5%91%98%E6%96%B9%E6%B3%95"><span class="toc-number">2.5.</span> <span class="toc-text">创建一个类的实例并调用他的成员方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B0%83%E7%94%A8%E4%B8%80%E4%B8%AA%E5%B7%B2%E5%AD%98%E5%9C%A8%E7%9A%84%E7%B1%BB%E7%9A%84%E5%AE%9E%E4%BE%8B%E7%9A%84%E6%88%90%E5%91%98%E6%96%B9%E6%B3%95"><span class="toc-number">2.6.</span> <span class="toc-text">调用一个已存在的类的实例的成员方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B0%83%E7%94%A8%E4%B8%80%E4%B8%AA%E4%BB%A5%E5%AF%B9%E8%B1%A1%E4%BD%9C%E4%B8%BA%E5%8F%82%E6%95%B0%E7%9A%84%E6%96%B9%E6%B3%95"><span class="toc-number">2.7.</span> <span class="toc-text">调用一个以对象作为参数的方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Hook%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0"><span class="toc-number">2.8.</span> <span class="toc-text">Hook构造函数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Hook-Native%E5%B1%82%E6%96%B9%E6%B3%95%E4%BF%AE%E6%94%B9%E4%BC%A0%E5%8F%82"><span class="toc-number">2.9.</span> <span class="toc-text">Hook Native层方法修改传参</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Hook-Native%E6%96%B9%E6%B3%95%E4%BF%AE%E6%94%B9%E8%BF%94%E5%9B%9E%E5%80%BC"><span class="toc-number">2.10.</span> <span class="toc-text">Hook Native方法修改返回值</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">3.</span> <span class="toc-text">总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">4.</span> <span class="toc-text">参考</span></a></li></ol>
+      </div>
+    
+  </span>
+</div>
+
+    
+    <div class="content index py4 ">
+        
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle p-name" itemprop="name headline">
+        Frida API基本使用
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span class="p-name" itemprop="name">runt0</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2025-03-22T10:37:31.000Z" class="dt-published" itemprop="datePublished">22 03 2025</time>
+        
+      
+    </div>
+
+
+      
+
+      
+    <div class="article-tag">
+        <i class="fa-solid fa-tag"></i>
+        <a class="p-category" href="/tags/frida-%E5%AE%89%E5%8D%93%E5%AE%89%E5%85%A8/" rel="tag">frida, 安卓安全</a>
+    </div>
+
+
+    </div>
+  </header>
+  
+
+  <div class="content e-content" itemprop="articleBody">
+    <p>最近在补安卓安全相关的知识，其中Frida动态Hook是一个重要的部分，于是写一篇文章来总结面对不同情况下Frida API的使用方法。</p>
+<h2 id="脚本开发环境搭建"><a href="#脚本开发环境搭建" class="headerlink" title="脚本开发环境搭建"></a>脚本开发环境搭建</h2><p>首先下载官方提供的nodejs项目</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git clone https://github.com/oleavr/frida<span class="literal">-agent-example</span>.git</span><br><span class="line"><span class="built_in">cd</span> frida<span class="literal">-agent-example</span>/</span><br><span class="line">npm install</span><br></pre></td></tr></table></figure>
+
+<p>使用webstorm&#x2F;vscode打开项目，之后就是nodejs开发的步骤。编写好脚本后，可以</p>
+<h2 id="Frida-API的使用"><a href="#Frida-API的使用" class="headerlink" title="Frida API的使用"></a>Frida API的使用</h2><p>这一部分使用Frida-Labs帮助我总结在使用Frida Hook不同方法的情况</p>
+<h3 id="Hook一个不带参数的成员方法"><a href="#Hook一个不带参数的成员方法" class="headerlink" title="Hook一个不带参数的成员方法"></a>Hook一个不带参数的成员方法</h3><ul>
+<li>Frida 0x1中修改com.ad2001.frida0x1.MainActivity#get_random方法，固定返回值为0</li>
+</ul>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">perform</span>(<span class="keyword">function</span> (<span class="params"></span>)&#123;</span><br><span class="line">    <span class="comment">// 指定要Hook的Java类</span></span><br><span class="line">    <span class="title class_">Java</span>.<span class="title function_">use</span>(<span class="string">&quot;com.ad2001.frida0x1.MainActivity&quot;</span>)</span><br><span class="line">        <span class="comment">// 指定要Hook的成员方法</span></span><br><span class="line">        .<span class="property">get_random</span></span><br><span class="line">        <span class="comment">// 重新实现方法</span></span><br><span class="line">        .<span class="property">implementation</span> = <span class="keyword">function</span> (<span class="params"></span>)&#123;</span><br><span class="line">            <span class="comment">// 修改逻辑: 此处为固定返回值</span></span><br><span class="line">            <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">        &#125;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<h3 id="Hook一个带参数成员方法"><a href="#Hook一个带参数成员方法" class="headerlink" title="Hook一个带参数成员方法"></a>Hook一个带参数成员方法</h3><ul>
+<li>Frida 0x1中修改com.ad2001.frida0x1.MainActivity#check方法，固定第一个参数为0</li>
+</ul>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 指定Java上下文</span></span><br><span class="line"><span class="title class_">Java</span>.<span class="title function_">perform</span>(<span class="keyword">function</span> (<span class="params"></span>)&#123;</span><br><span class="line">    <span class="comment">// 指定要Hook的Java类</span></span><br><span class="line">    <span class="title class_">Java</span>.<span class="title function_">use</span>(<span class="string">&quot;com.ad2001.frida0x1.MainActivity&quot;</span>)</span><br><span class="line">        <span class="comment">// 指定要Hook的成员方法的重载</span></span><br><span class="line">        .<span class="property">check</span>.<span class="title function_">overload</span>(<span class="string">&quot;int&quot;</span>,<span class="string">&quot;int&quot;</span>)</span><br><span class="line">        <span class="comment">// 重新实现方法</span></span><br><span class="line">        .<span class="property">implementation</span> = <span class="keyword">function</span> (<span class="params">i,i2</span>)&#123;</span><br><span class="line">            <span class="comment">// 此处是修改的方法逻辑(将方法的第一个传参固定为0)</span></span><br><span class="line">            i = <span class="number">0</span></span><br><span class="line">            <span class="comment">// 其余方法逻辑不变, 直接调用原来的方法逻辑</span></span><br><span class="line">            <span class="variable language_">this</span>.<span class="title function_">check</span>(i,i2)</span><br><span class="line">        &#125;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<h3 id="调用一个类的静态方法"><a href="#调用一个类的静态方法" class="headerlink" title="调用一个类的静态方法"></a>调用一个类的静态方法</h3><ul>
+<li>Frida 0x2中调用com.ad2001.frida0x1.MainActivity#get_flag方法</li>
+</ul>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">perform</span>(<span class="keyword">function</span> (<span class="params"></span>)&#123;</span><br><span class="line">    <span class="comment">// 指定要调用的Java类</span></span><br><span class="line">    <span class="title class_">Java</span>.<span class="title function_">use</span>(<span class="string">&quot;com.ad2001.frida0x2.MainActivity&quot;</span>)</span><br><span class="line">        <span class="comment">// 调用方法</span></span><br><span class="line">        .<span class="title function_">get_flag</span>(<span class="number">4919</span>);</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<h3 id="修改一个类的静态变量"><a href="#修改一个类的静态变量" class="headerlink" title="修改一个类的静态变量"></a>修改一个类的静态变量</h3><ul>
+<li>Frida 0x3中修改com.ad2001.frida0x3.Checker中code的值</li>
+</ul>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">perform</span>(<span class="keyword">function</span> (<span class="params"></span>)&#123;</span><br><span class="line">    <span class="comment">// 指定要修改的Java类</span></span><br><span class="line">    <span class="title class_">Java</span>.<span class="title function_">use</span>(<span class="string">&quot;com.ad2001.frida0x3.Checker&quot;</span>)</span><br><span class="line">        <span class="comment">// 指定要修改的静态变量的值</span></span><br><span class="line">        .<span class="property">code</span>.<span class="property">value</span> = <span class="number">512</span>;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<h3 id="创建一个类的实例并调用他的成员方法"><a href="#创建一个类的实例并调用他的成员方法" class="headerlink" title="创建一个类的实例并调用他的成员方法"></a>创建一个类的实例并调用他的成员方法</h3><ul>
+<li>Frida 0x4中创建com.ad2001.frida0x4.Check中的示例并调用com.ad2001.frida0x4.Check#get_flag方法</li>
+</ul>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">perform</span>(<span class="keyword">function</span> (<span class="params"></span>)&#123;</span><br><span class="line">    <span class="comment">// 指定要创建对象的Java类</span></span><br><span class="line">    <span class="keyword">var</span> flag = <span class="title class_">Java</span>.<span class="title function_">use</span>(<span class="string">&quot;com.ad2001.frida0x4.Check&quot;</span>)</span><br><span class="line">        <span class="comment">// 创建实例</span></span><br><span class="line">        .$new()</span><br><span class="line">        <span class="comment">// 调用成员方法</span></span><br><span class="line">        .<span class="title function_">get_flag</span>(<span class="number">1337</span>)</span><br><span class="line">    <span class="variable language_">console</span>.<span class="title function_">log</span>(flag)</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<h3 id="调用一个已存在的类的实例的成员方法"><a href="#调用一个已存在的类的实例的成员方法" class="headerlink" title="调用一个已存在的类的实例的成员方法"></a>调用一个已存在的类的实例的成员方法</h3><ul>
+<li>Frida 0x5中获取已经存在的实例com.ad2001.frida0x5.MainActivity，并调用com.ad2001.frida0x5.MainActivity#flag方法</li>
+</ul>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">perform</span>(<span class="keyword">function</span> (<span class="params"></span>)&#123;</span><br><span class="line">    <span class="comment">// 选择对应类</span></span><br><span class="line">   <span class="title class_">Java</span>.<span class="title function_">choose</span>(<span class="string">&quot;com.ad2001.frida0x5.MainActivity&quot;</span>,&#123;</span><br><span class="line">       <span class="comment">// 匹配成功后回调函数, 参数为该类实例</span></span><br><span class="line">       <span class="attr">onMatch</span>: <span class="keyword">function</span> (<span class="params">instance</span>)&#123;</span><br><span class="line">           <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;found instance&quot;</span>)</span><br><span class="line">           instance.<span class="title function_">flag</span>(<span class="number">1337</span>)</span><br><span class="line">       &#125;,</span><br><span class="line">       <span class="attr">onComplete</span>: <span class="keyword">function</span> (<span class="params"></span>)&#123;&#125;</span><br><span class="line">   &#125;)</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<h3 id="调用一个以对象作为参数的方法"><a href="#调用一个以对象作为参数的方法" class="headerlink" title="调用一个以对象作为参数的方法"></a>调用一个以对象作为参数的方法</h3><ul>
+<li>Frida 0x6中获取已经存在的实例com.ad2001.frida0x6.MainActivity，并调用com.ad2001.frida0x6.MainActivity#flag方法，以一个Checker对象作为参数传递</li>
+</ul>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">performNow</span>(<span class="keyword">function</span>(<span class="params"></span>) &#123;</span><br><span class="line">    <span class="comment">// 选择实例对应类</span></span><br><span class="line">    <span class="title class_">Java</span>.<span class="title function_">choose</span>(<span class="string">&#x27;com.ad2001.frida0x6.MainActivity&#x27;</span>, &#123;</span><br><span class="line">        <span class="comment">// 匹配成功后回调函数</span></span><br><span class="line">        <span class="attr">onMatch</span>: <span class="keyword">function</span>(<span class="params">instance</span>) &#123;</span><br><span class="line">            <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;found instance&quot;</span>);</span><br><span class="line">            <span class="comment">// 创建一个新的Checker实例</span></span><br><span class="line">            <span class="keyword">var</span> checker = <span class="title class_">Java</span>.<span class="title function_">use</span>(<span class="string">&quot;com.ad2001.frida0x6.Checker&quot;</span>)</span><br><span class="line">                .<span class="property">$new</span>;</span><br><span class="line">            <span class="comment">// 给Checker对象赋值</span></span><br><span class="line">            checker.<span class="property">num1</span>.<span class="property">value</span> = <span class="number">1234</span>; <span class="comment">// num1</span></span><br><span class="line">            checker.<span class="property">num2</span>.<span class="property">value</span> = <span class="number">4321</span>; <span class="comment">// num2</span></span><br><span class="line">            <span class="comment">// 将Checker对象作为参数传递</span></span><br><span class="line">            instance.<span class="title function_">get_flag</span>(checker); <span class="comment">// 调用实例的成员方法</span></span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="attr">onComplete</span>: <span class="keyword">function</span>(<span class="params"></span>) &#123;&#125;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<h3 id="Hook构造函数"><a href="#Hook构造函数" class="headerlink" title="Hook构造函数"></a>Hook构造函数</h3><ul>
+<li>Frida 0x7中获取已经存在的实例com.ad2001.frida0x7.MainActivity，并hook Checker类的构造函数创建Checker示例，然后调用com.ad2001.frida0x7.MainActivity#flag方法，以Checker对象作为参数传递。这里需要注意Hook的时机，如果以-l参数传递脚本会报错：<code>Didn&#39;t find class &quot;com.ad2001.frida0x7.MainActivity&quot; on path: DexPathList</code>，这是因为MainActivity还未加载完成，有两种方式解决，一种是使用frida -f先启动程序，然后在控制台中输入hook脚本；第二种是在脚本中指定延迟hook</li>
+</ul>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">function</span> <span class="title function_">hook</span>(<span class="params"></span>)&#123;</span><br><span class="line">    <span class="title class_">Java</span>.<span class="title function_">performNow</span>(<span class="keyword">function</span>(<span class="params"></span>) &#123;</span><br><span class="line">        <span class="comment">// 选择对应类</span></span><br><span class="line">        <span class="title class_">Java</span>.<span class="title function_">choose</span>(<span class="string">&#x27;com.ad2001.frida0x7.MainActivity&#x27;</span>, &#123;</span><br><span class="line">            <span class="comment">// 匹配成功后回调函数</span></span><br><span class="line">            <span class="attr">onMatch</span>: <span class="keyword">function</span>(<span class="params">instance</span>) &#123;</span><br><span class="line">                <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;Instance found&quot;</span>);</span><br><span class="line">                <span class="comment">// 指定类并调用构造函数创建实例</span></span><br><span class="line">                <span class="keyword">var</span> checker = <span class="title class_">Java</span>.<span class="title function_">use</span>(<span class="string">&quot;com.ad2001.frida0x7.Checker&quot;</span>)</span><br><span class="line">                    .$new(<span class="number">600</span>,<span class="number">600</span>);</span><br><span class="line">                instance.<span class="title function_">flag</span>(checker); <span class="comment">// invoking the get_flag method</span></span><br><span class="line">            &#125;,</span><br><span class="line">            <span class="attr">onComplete</span>: <span class="keyword">function</span>(<span class="params"></span>) &#123;&#125;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 延迟5s开始hook</span></span><br><span class="line"><span class="built_in">setTimeout</span>(hook,<span class="number">5000</span>)</span><br></pre></td></tr></table></figure>
+
+<h3 id="Hook-Native层方法修改传参"><a href="#Hook-Native层方法修改传参" class="headerlink" title="Hook Native层方法修改传参"></a>Hook Native层方法修改传参</h3><p><img src="/2025/03/22/frida-basic-summary/image-20250322183445509.png" alt="image-20250322183445509"><img src="/2025/03/22/frida-basic-summary/image-20250322183423626.png" alt="image-20250322183423626"></p>
+<p>Hook Native方法的关键是获取导出函数的地址，Firda提供了以下4种API（同样可能会存在Hook时机的问题，可以使用延迟函数或者使用相应的APP的功能后确保so加载）：</p>
+<ol>
+<li><p><code>Module.enumerateExports()</code>：获取so文件种所有导出函数的信息，再遍历结果，获取指定函数地址</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">performNow</span>(<span class="keyword">function</span>(<span class="params"></span>) &#123;</span><br><span class="line">    <span class="keyword">var</span> modules = <span class="title class_">Module</span>.<span class="title function_">enumerateExports</span>(<span class="string">&#x27;libfrida0x8.so&#x27;</span>)</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> i <span class="keyword">in</span> modules)&#123;</span><br><span class="line">        <span class="keyword">if</span> (modules[i].<span class="property">name</span>.<span class="title function_">indexOf</span>(<span class="string">&quot;cmpstr&quot;</span>) &gt; -<span class="number">1</span>)&#123;</span><br><span class="line">            <span class="variable language_">console</span>.<span class="title function_">log</span>(modules[i].<span class="property">address</span>)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><code>Module.getExportByName()</code>：根据名称获取导出函数的地址</p>
+</li>
+</ol>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">performNow</span>(<span class="keyword">function</span>(<span class="params"></span>) &#123;</span><br><span class="line">    <span class="comment">// 注意这里要写导出表中的函数名</span></span><br><span class="line">    <span class="keyword">var</span> addr = <span class="title class_">Module</span>.<span class="title function_">getExportByName</span>(<span class="string">&quot;libfrida0x8.so&quot;</span>,<span class="string">&quot;Java_com_ad2001_frida0x8_MainActivity_cmpstr&quot;</span>)</span><br><span class="line">    <span class="variable language_">console</span>.<span class="title function_">log</span>(addr)</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li><p><code>Module.findExportByName()</code>：根据名称获取导出函数的地址，没找到抛出异常并返回null</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">performNow</span>(<span class="keyword">function</span>(<span class="params"></span>) &#123;</span><br><span class="line">    <span class="comment">// 注意这里要写导出表中的函数名</span></span><br><span class="line">    <span class="keyword">var</span> addr = <span class="title class_">Module</span>.<span class="title function_">findExportByName</span>(<span class="string">&quot;libfrida0x8.so&quot;</span>,<span class="string">&quot;Java_com_ad2001_frida0x8_MainActivity_cmpstr&quot;</span>)</span><br><span class="line">    <span class="variable language_">console</span>.<span class="title function_">log</span>(addr)</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><code>Module.getBaseAddress()</code>：如果以上API都无法获取函数地址，那么可以利用此API先获取so文件的基址，然后加上函数偏移的方式获取函数地址</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">performNow</span>(<span class="keyword">function</span>(<span class="params"></span>) &#123;</span><br><span class="line">    <span class="comment">// 注意这里要写导出表中的函数名，0x770是在IDA Pro等静态逆向工具中查看的函数偏移地址</span></span><br><span class="line">    <span class="keyword">var</span> addr = <span class="title class_">Module</span>.<span class="title function_">getBaseAddress</span>(<span class="string">&quot;libfrida0x8.so&quot;</span>).<span class="title function_">add</span>(<span class="number">0x770</span>)</span><br><span class="line">    <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;base + offset: &quot;</span> + addr)</span><br><span class="line"></span><br><span class="line">    addr = <span class="title class_">Module</span>.<span class="title function_">findExportByName</span>(<span class="string">&quot;libfrida0x8.so&quot;</span>,<span class="string">&quot;Java_com_ad2001_frida0x8_MainActivity_cmpstr&quot;</span>)</span><br><span class="line">    <span class="variable language_">console</span>.<span class="title function_">log</span>(addr)</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure></li>
+</ol>
+<ul>
+<li>Frida 0x8中通过hook libc中的strcmp函数来使得通过输入校验</li>
+</ul>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">performNow</span>(<span class="keyword">function</span> (<span class="params"></span>) &#123;</span><br><span class="line">    <span class="keyword">var</span> strcmp_adr = <span class="title class_">Module</span>.<span class="title function_">findExportByName</span>(<span class="string">&quot;libc.so&quot;</span>, <span class="string">&quot;strcmp&quot;</span>);</span><br><span class="line">    <span class="comment">// hook native层函数</span></span><br><span class="line">    <span class="title class_">Interceptor</span>.<span class="title function_">attach</span>(strcmp_adr, &#123;</span><br><span class="line">        <span class="attr">onEnter</span>: <span class="keyword">function</span> (<span class="params">args</span>) &#123;</span><br><span class="line">            <span class="keyword">var</span> arg0 = <span class="title class_">Memory</span>.<span class="title function_">readUtf8String</span>(args[<span class="number">0</span>]); <span class="comment">// first argument</span></span><br><span class="line">            <span class="keyword">var</span> flag = <span class="title class_">Memory</span>.<span class="title function_">readUtf8String</span>(args[<span class="number">1</span>]); <span class="comment">// second argument</span></span><br><span class="line">            <span class="comment">// 只hook指定的函数, 此处表示只对我们输入为Hello的情况进行处理</span></span><br><span class="line">            <span class="keyword">if</span> (arg0.<span class="title function_">includes</span>(<span class="string">&quot;Hello&quot;</span>)) &#123;</span><br><span class="line">                <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;Hookin the strcmp function&quot;</span>);</span><br><span class="line">                <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;Input &quot;</span> + arg0);</span><br><span class="line">                <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&quot;The flag is &quot;</span>+ flag);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="comment">// Modify or log return value if needed</span></span><br><span class="line">        <span class="attr">onLeave</span>: <span class="keyword">function</span> (<span class="params">retval</span>) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<h3 id="Hook-Native方法修改返回值"><a href="#Hook-Native方法修改返回值" class="headerlink" title="Hook Native方法修改返回值"></a>Hook Native方法修改返回值</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Java</span>.<span class="title function_">performNow</span>(<span class="keyword">function</span> (<span class="params"></span>) &#123;</span><br><span class="line">    <span class="keyword">var</span> check_flag_addr = <span class="title class_">Module</span>.<span class="title function_">findExportByName</span>(<span class="string">&quot;liba0x9.so&quot;</span>, <span class="string">&quot;Java_com_ad2001_a0x9_MainActivity_check_1flag&quot;</span>);</span><br><span class="line">    <span class="comment">// hook native层函数</span></span><br><span class="line">    <span class="title class_">Interceptor</span>.<span class="title function_">attach</span>(check_flag_addr, &#123;</span><br><span class="line">        <span class="attr">onEnter</span>: <span class="keyword">function</span> (<span class="params">args</span>) &#123;</span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="attr">onLeave</span>: <span class="keyword">function</span> (<span class="params">retval</span>) &#123;</span><br><span class="line">            <span class="comment">// 修改返回值</span></span><br><span class="line">            retval.<span class="title function_">replace</span>(<span class="number">1337</span>)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ul>
+<li>在进行hook时，由于代码加载时机的问题可能会导致hook不到原本应该能hook到的内容，此时解决思路通常有几种：<ol>
+<li>使用<code>setTimeout</code>API延时加载；</li>
+<li>在控制台使用APP一段时间后再贴入脚本；</li>
+<li>APP启动时指定脚本路径；</li>
+</ol>
+</li>
+<li>Hook Native层方法相关的API<ol>
+<li><code>Module.enumerateExports()</code>：获取so文件中所有导出函数的信息，再遍历结果，获取指定函数地</li>
+<li><code>Module.getExportByName()</code>：根据名称获取导出函数的地址</li>
+<li><code>Module.findExportByName()</code>：根据名称获取导出函数的地址，没找到抛出异常并返回null</li>
+<li><code>Module.getBaseAddress()</code>：如果以上API都无法获取函数地址，那么可以利用此API先获取so文件的基址，然后加上函数偏移的方式获取函数地址</li>
+</ol>
+</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/DERE-ad2001/Frida-Labs">https://github.com/DERE-ad2001/Frida-Labs</a></li>
+</ul>
+
+  </div>
+</article>
+
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+        
+          <li><a href="/">首页</a></li>
+        
+          <li><a href="/about/">关于</a></li>
+        
+          <li><a href="/archives/">归档</a></li>
+        
+          <li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li>
+        
+      </ul>
+    </div>
+
+    
+    
+      <div id="toc-footer" style="display: none">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%84%9A%E6%9C%AC%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="toc-number">1.</span> <span class="toc-text">脚本开发环境搭建</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Frida-API%E7%9A%84%E4%BD%BF%E7%94%A8"><span class="toc-number">2.</span> <span class="toc-text">Frida API的使用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Hook%E4%B8%80%E4%B8%AA%E4%B8%8D%E5%B8%A6%E5%8F%82%E6%95%B0%E7%9A%84%E6%88%90%E5%91%98%E6%96%B9%E6%B3%95"><span class="toc-number">2.1.</span> <span class="toc-text">Hook一个不带参数的成员方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Hook%E4%B8%80%E4%B8%AA%E5%B8%A6%E5%8F%82%E6%95%B0%E6%88%90%E5%91%98%E6%96%B9%E6%B3%95"><span class="toc-number">2.2.</span> <span class="toc-text">Hook一个带参数成员方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B0%83%E7%94%A8%E4%B8%80%E4%B8%AA%E7%B1%BB%E7%9A%84%E9%9D%99%E6%80%81%E6%96%B9%E6%B3%95"><span class="toc-number">2.3.</span> <span class="toc-text">调用一个类的静态方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BF%AE%E6%94%B9%E4%B8%80%E4%B8%AA%E7%B1%BB%E7%9A%84%E9%9D%99%E6%80%81%E5%8F%98%E9%87%8F"><span class="toc-number">2.4.</span> <span class="toc-text">修改一个类的静态变量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AA%E7%B1%BB%E7%9A%84%E5%AE%9E%E4%BE%8B%E5%B9%B6%E8%B0%83%E7%94%A8%E4%BB%96%E7%9A%84%E6%88%90%E5%91%98%E6%96%B9%E6%B3%95"><span class="toc-number">2.5.</span> <span class="toc-text">创建一个类的实例并调用他的成员方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B0%83%E7%94%A8%E4%B8%80%E4%B8%AA%E5%B7%B2%E5%AD%98%E5%9C%A8%E7%9A%84%E7%B1%BB%E7%9A%84%E5%AE%9E%E4%BE%8B%E7%9A%84%E6%88%90%E5%91%98%E6%96%B9%E6%B3%95"><span class="toc-number">2.6.</span> <span class="toc-text">调用一个已存在的类的实例的成员方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B0%83%E7%94%A8%E4%B8%80%E4%B8%AA%E4%BB%A5%E5%AF%B9%E8%B1%A1%E4%BD%9C%E4%B8%BA%E5%8F%82%E6%95%B0%E7%9A%84%E6%96%B9%E6%B3%95"><span class="toc-number">2.7.</span> <span class="toc-text">调用一个以对象作为参数的方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Hook%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0"><span class="toc-number">2.8.</span> <span class="toc-text">Hook构造函数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Hook-Native%E5%B1%82%E6%96%B9%E6%B3%95%E4%BF%AE%E6%94%B9%E4%BC%A0%E5%8F%82"><span class="toc-number">2.9.</span> <span class="toc-text">Hook Native层方法修改传参</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Hook-Native%E6%96%B9%E6%B3%95%E4%BF%AE%E6%94%B9%E8%BF%94%E5%9B%9E%E5%80%BC"><span class="toc-number">2.10.</span> <span class="toc-text">Hook Native方法修改返回值</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">3.</span> <span class="toc-text">总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">4.</span> <span class="toc-text">参考</span></a></li></ol>
+      </div>
+    
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=http://example.com/2025/03/22/frida-basic-summary/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=http://example.com/2025/03/22/frida-basic-summary/&text=Frida API基本使用"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=http://example.com/2025/03/22/frida-basic-summary/&title=Frida API基本使用"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=http://example.com/2025/03/22/frida-basic-summary/&is_video=false&description=Frida API基本使用"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=Frida API基本使用&body=Check out this article: http://example.com/2025/03/22/frida-basic-summary/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=http://example.com/2025/03/22/frida-basic-summary/&title=Frida API基本使用"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=http://example.com/2025/03/22/frida-basic-summary/&title=Frida API基本使用"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=http://example.com/2025/03/22/frida-basic-summary/&title=Frida API基本使用"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=http://example.com/2025/03/22/frida-basic-summary/&title=Frida API基本使用"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=http://example.com/2025/03/22/frida-basic-summary/&name=Frida API基本使用&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=http://example.com/2025/03/22/frida-basic-summary/&t=Frida API基本使用"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> 菜单</a>
+        
+          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> 目录</a>
+        
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> 分享</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> 返回顶部</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-left">
+    Copyright &copy;
+    
+    
+    2016-2025
+    runt0
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/runt0">项目</a></li><!--
+     -->
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+
+  <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'"/>
+
+
+    <!-- jquery -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous"></script>
+
+
+
+
+<!-- clipboard -->
+
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.7/clipboard.min.js" crossorigin="anonymous"></script>
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"复制到粘贴板！\">";
+    btn += '<i class="fa-regular fa-clone"></i>';
+    btn += '</span>';
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "复制成功！");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+<!-- search -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>
